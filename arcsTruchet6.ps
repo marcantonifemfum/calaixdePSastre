@@ -1,0 +1,261 @@
+%!
+%% fem cairons Truchet amb tessel·lat d'esquerra a dreta i de baix a dalt
+%% en base a la unitat com a valor del mòdul i amb un valor d'escala o sense, via arc
+%% dibuixem i deixem les dades de cada arc dins una array i una array per línia (llistem al prompt o les deixem a l'stack)
+%% adaptem el format de pàgina al tessel·lat
+
+/DoD true def  %% dibuixem o deixem les dades?
+
+/yTruchet 2 def  %% el nombre de cairons Y funciona com un índex, o sigui +1 ens dóna el valor real de l'àrea Truchet
+/xTruchet 2 def  %% el nombre de cairons X funciona com un índex, o sigui +1 ens dóna el valor real de l'àrea Truchet
+/sCairo 100 def  %% escala
+/mCairo 1 def  %% valor del mòdul (fora de la unitat pot permetre treballar prescindint d' scale)
+
+/xyCairo 2 mCairo mul def  %% mòduls d'ample/alt de la tessel·la
+/araX 0 def  %% posició actual X al centre de l'arc
+/araY 0 def  %% posició actual Y al centre de l'arc
+
+%% fem una array de comportament per a determinades figures o un treball 100% aleatori
+%% tal i com treballa l'algorisme aquest resultat pot variar una mica si el nombre de cairons en X no és imparell 
+[false true true false]  %% rodones | onades horitzontals
+%[true false false true]  %% onades verticals | ídem
+%[true true true true]  %% onades horitzontals | rodones
+%[false false false false]  %% onades NO/SE | ídem
+%[true false false false]  %% onades SO/NE | ídem
+/5figures exch def
+/aTruchet 5figures 0 get def  %% valor inicial d'un possible aleatori
+
+<<  %% adaptem al tessel·lat
+  /PageSize
+  [
+   xTruchet 1 add xyCairo mul sCairo mul
+   yTruchet 1 add xyCairo mul sCairo mul
+  ]
+>>setpagedevice
+
+%% escalem?
+sCairo dup scale  %% donant valor a mCairo en podem prescindir
+0 setlinewidth  %% condicionat per l'escala
+
+mark  %% array final amb totes les línies de trama de cairons ja enllaçats
+
+[  %% array pel forall
+ 0 1 yTruchet
+ { %% for que genera una array de coordenades per cada línia (X) de cairons (sentit trama)
+  pop [
+  0 1 xTruchet
+  {  %% for
+   pop
+   aTruchet
+   {
+    newpath
+    [
+     araX araY xyCairo add 2 copy
+     mCairo 270 0 arc stroke
+     2 copy mCairo sub 4 -1 roll mCairo add 4 -1 roll
+    ]
+    newpath
+    [
+     araX xyCairo add araY 2 copy
+     mCairo 90 180 arc stroke
+     2 copy mCairo add 4 -1 roll mCairo sub 4 -1 roll
+    ]
+    araX xyCairo add /araX exch def
+    5figures 1 get
+    {
+     aTruchet not /aTruchet exch def
+    }if
+   }
+   {
+    newpath
+    [
+     araX araY 2 copy
+     mCairo 0 90 arc stroke
+     2 copy exch mCairo add exch 4 -1 roll 4 -1 roll mCairo add
+    ]
+    newpath
+    [
+     araX xyCairo add araY xyCairo add 2 copy
+     mCairo 180 270 arc stroke
+     2 copy exch mCairo sub exch 4 -1 roll 4 -1 roll mCairo sub
+    ]
+    araX xyCairo add /araX exch def
+    5figures 2 get
+    {
+     aTruchet not /aTruchet exch def
+    }if
+   }ifelse
+  }for
+  %% inicialitzem per cada línia
+  /araX 0 def
+  araY xyCairo add /araY exch def
+  5figures 3 get
+  {
+   aTruchet not /aTruchet exch def
+  }if
+  ]  % ==  %% deixem a l'stack?
+ }for
+]  %% deixem a l'stack
+
+{  %% forall per a cadascuna de les línies 
+ %% anàlisi per lligar coordenades en horitzontal (cosir els cairons en sentit trama)
+ /salTi 2 def  %% salt d'índex
+ /iArc 1 def  %% índex actual
+ dup length 1 sub /MAXi exch def  %% índex màxim per l'array analitzat
+
+ %% profilaxi?
+ %[ exch
+ % {
+ %  dup length array copy
+ % }forall
+ %]
+
+ %pstack quit
+ /caironsQueEnllacen exch def
+
+ {  %% loop
+  %% les baules són 2 arrays de coordenades contígües que podem enllaçar
+  %% a cada volta de loop en comparem un parell fins que esgotem la línia (sortim del loop) 
+  caironsQueEnllacen iArc get /baula1 exch def
+  caironsQueEnllacen iArc 1 add get /baula2 exch def
+  %% hi ha 4 possibilitats que els 2 arcs enllacin
+  baula1 0 2 getinterval dup
+  baula2 0 2 getinterval
+  %% com feia comparaarray.ps ens cal comparar element per element per deduïr que són idèntiques
+  /a1 exch def
+  /a2 exch def
+  0 1 a1 length 1 sub
+  {  %% for
+   dup a1 exch get exch a2 exch get eq
+   {
+    true
+   }
+   {
+    false
+   }ifelse
+  }for
+  a1 length 1 sub {and}repeat  %%1 que l'índex 0/1 de la baula1 coincideixi amb l'índex 0/1 de la baula2
+  {
+   [
+    [
+     baula1  %% ens cal invertir les coordenades de l'array
+     aload pop 4 -1 roll 4 -1 roll
+    ]
+    baula2
+   ]
+   MAXi array dup  %% la nova array per emmagatzemar l'enllaç i la resta d'arcs sense enllaçar
+   3 -1 roll iArc exch put  %% emmagatzemem l'enllaç
+   dup caironsQueEnllacen 0 iArc getinterval 0 exch putinterval  %% farcim el davant de l'array amb els arcs no intervinguts
+   dup MAXi iArc 1 add sub caironsQueEnllacen iArc 2 add 3 -1 roll getinterval  %% agafem els arcs no intervinguts de la cua
+   iArc 1 add exch putinterval /caironsQueEnllacen exch def  %% farcim la cua de l'array i desem
+   MAXi 1 sub /MAXi exch def iArc 1 add /iArc exch def  %% actualitzem
+   %(##1 l'índex 0/1 de la baula1 coincideix amb l'índex 0/1 de la baula2) ==  %pstack exit % quit
+   pop  %% eliminem la coordenada duplicada de la baula1
+  }
+  {  %%2 que l'índex 0/1 de la baula1 coincideixi amb l'índex 2/3 de la baula2
+   baula2 2 2 getinterval
+   %% com feia comparaarray.ps ens cal comparar element per element per deduïr que són idèntiques
+   /a1 exch def
+   /a2 exch def
+   0 1 a1 length 1 sub
+   {  %% for
+    dup a1 exch get exch a2 exch get eq
+    {
+     true
+    }
+    {
+     false
+    }ifelse
+   }for
+   a1 length 1 sub {and}repeat
+   {
+    [ baula2 baula1 ]  %% invertim els 2 arcs que enllacen dins una array
+    MAXi array dup  %% la nova array per emmagatzemar l'enllaç i la resta d'arcs sense enllaçar
+    3 -1 roll iArc exch put  %% emmagatzemem l'enllaç
+    dup caironsQueEnllacen 0 iArc getinterval 0 exch putinterval  %% farcim el davant de l'array amb els arcs no intervinguts
+    dup MAXi iArc 1 add sub caironsQueEnllacen iArc 2 add 3 -1 roll getinterval  %% agafem els arcs no intervinguts de la cua
+    iArc 1 add exch putinterval /caironsQueEnllacen exch def  %% farcim la cua de l'array i desem
+    MAXi 1 sub /MAXi exch def iArc 1 add /iArc exch def  %% actualitzem
+    %(##2 l'índex 0/1 de la baula1 coincideix amb l'índex 2/3 de la baula2) ==  %pstack exit % quit
+   }
+   {  %%3 que l'índex 2/3 de la baula1 coincideixi amb l'índex 0/1 de la baula2
+    baula1 2 2 getinterval baula2 0 2 getinterval
+    %% com feia comparaarray.ps ens cal comparar element per element per deduïr que són idèntiques
+    /a1 exch def
+    /a2 exch def
+    0 1 a1 length 1 sub
+    {  %% for
+     dup a1 exch get exch a2 exch get eq
+     {
+      true
+     }
+     {
+      false
+     }ifelse
+    }for
+    a1 length 1 sub {and}repeat
+    {
+     caironsQueEnllacen iArc 2 getinterval %% extraiem els 2 arcs que enllacen dins una array
+     MAXi array dup  %% la nova array per emmagatzemar l'enllaç i la resta d'arcs sense enllaçar
+     3 -1 roll iArc exch put  %% emmagatzemem l'enllaç
+     dup caironsQueEnllacen 0 iArc getinterval 0 exch putinterval  %% farcim el davant de l'array amb els arcs no intervinguts
+     dup MAXi iArc 1 add sub caironsQueEnllacen iArc 2 add 3 -1 roll getinterval  %% agafem els arcs no intervinguts de la cua
+     iArc 1 add exch putinterval /caironsQueEnllacen exch def  %% farcim la cua de l'array i desem
+     MAXi 1 sub /MAXi exch def iArc 1 add /iArc exch def  %% actualitzem
+     %(##3 l'índex 2/3 de la baula1 coincideix amb l'índex 0/1 de la baula2) ==  %pstack exit % quit
+    }
+    {  %%4 que l'índex 2/3 de la baula1 coincideixi amb l'índex 2/3 de la baula2
+     baula1 2 2 getinterval %dup
+     baula2 2 2 getinterval
+     %% com feia comparaarray.ps ens cal comparar element per element per deduïr que són idèntiques
+     /a1 exch def
+     /a2 exch def
+     0 1 a1 length 1 sub
+     {  %% for
+      dup a1 exch get exch a2 exch get eq
+      {
+       true
+      }
+      {
+       false
+      }ifelse
+     }for
+     a1 length 1 sub {and}repeat
+     {
+      [
+       baula1
+       baula2 aload pop 4 1 roll 4 1 roll 4 array astore  %% invertim la segona coordenada de la baula2
+      ]
+      MAXi array dup  %% la nova array per emmagatzemar l'enllaç i la resta d'arcs sense enllaçar
+      3 -1 roll iArc exch put  %% emmagatzemem l'enllaç
+      dup caironsQueEnllacen 0 iArc getinterval 0 exch putinterval  %% farcim el davant de l'array amb els arcs no intervinguts
+      dup MAXi iArc 1 add sub caironsQueEnllacen iArc 2 add 3 -1 roll getinterval  %% agafem els arcs no intervinguts de la cua
+      iArc 1 add exch putinterval /caironsQueEnllacen exch def  %% farcim la cua de l'array i desem
+      MAXi 1 sub /MAXi exch def iArc 1 add /iArc exch def  %% actualitzem
+      %(##4 l'índex 2/3 de la baula1 coincideix amb l'índex 2/3 de la baula2) ==  %pstack exit % quit
+     }
+     {  %% això no passarà mai!
+      MAXi iArc  caironsQueEnllacen %( !!!!)pstack quit
+      (##5 cap de les coordenades coincideix!)pstack exit % quit
+     }ifelse
+    }ifelse
+   }ifelse
+  }ifelse
+
+  MAXi iArc eq
+  {  %% sortim?
+   caironsQueEnllacen
+   exit % quit
+  }if
+ }loop
+
+}forall  %% per a cadascuna de les línies
+
+]  %% array final amb totes les línies de trama de cairons ja enllaçats
+
+  (##6 BROSSA?)pstack
+
+%%Ens cal ara generar l'algorisme per cosir els arcs dels cairons en vertical
+
+showpage
+
