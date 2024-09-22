@@ -1,0 +1,1111 @@
+%!
+%% fem cairons Truchet amb tessel·lat d'esquerra a dreta i de baix a dalt, en base a la unitat com a valor del mòdul
+%% on 2x2 mòduls fan 1 cairó i amb un valor d'escala (o sense), dibuixant via l'operador arc (1 arc = 1 mòdul)
+%% parlem de baules per descriure coordenades (4) de cada arc dins una array (n'hi pot haver més d'1) i una array per trama
+%% i una array per figura, que defineix el format de pàgina, on el tessel·lat de cairons hi encaixa
+
+%% generador aleatori d'1 Truchet simplificat al màxim i en base al mòdul, de manera que dins d'un loop horitzontal (trama X)
+%% i vertical (ordit Y) hi afegirem un sumador que situi els cairons dins la figura tessel·lada nX x nY
+%% iniciem l'aleatori plantant la llavor (són possibles 4 posicions d'arc amb 2 sentits de traç per cadascun)
+realtime srand
+/mX 0 def  %% valors inicials dels posicionaments x,y de les coordenades d'arc dins cada cairó
+/mY 0 def
+
+%%MÈTODES D'ALEATORIETAT:
+%%+1 JUGAR AMB L'ALEATORIETAT DE LES 4 POSICIONS
+%% la posició del 1er arc (LL UL) ens dóna automàticament la posició del segon (LL/UR UL/LR)
+false  %% ho desactivem ara
+{
+[
+ {  %% si la X és 0 la Y només pot ser 1, però encara sense saber si serà LL o UL
+  mX
+  mY 1 add
+ }
+ {  %% si la X és 1 la Y només pot ser 0 o 2, però encara sense saber si serà LL o LR o UR o UL
+  mX 1 add
+  [{mY}{mY 2 add}] rand 2 mod get cvx exec
+ }
+ {  %% si la X és 2 la Y només pot ser 1, però encara sense saber si serà LR o UR
+  mX 2 add
+  mY 1 add
+ }
+]
+rand 3 mod get cvx exec  %% X ha de donar o 0 o 1 o 2
+
+%% taula de la veritat Truchet del 1er arc
+[
+ {  %% X0
+(com que la X es 0, pot ser LL o UL)==
+  [  %% triem si serà LL o UL per generar les 4 coordenades de l'arc
+   {  %% LL
+    mX 1 add mY  %% afegim les 2 coordenades que falten per fer l'arc
+   }
+   {  %% UL
+    mX 1 add mY 2 add  %% afegim les 2 coordenades que falten per fer l'arc
+   }
+  ] rand 2 mod get cvx exec
+ }
+ {  %% X1
+(com que la X es 1, la Y es 0 o 2?)==
+%% si la Y és 0 triem si serà LL o LR per generar les 4 coordenades de l'arc
+  %% si la Y és 2 triem si serà UL o UR per generar les 4 coordenades de l'arc
+ }
+ {  %% X2
+(com que la X es 2, pot ser LR o UR)==
+  %% triem si serà LR o UR per generar les 4 coordenades de l'arc
+ }
+] 2 index get cvx exec  %% cridem per la X i executem
+}if  %% desactivem
+
+%%+2 JUGAR AMB L'ALEATORIETAT DE LES ARRAYS ESTÀTIQUES DELS 8 CAIRONS POSSIBLES:
+%% caldria esbrinar si la disposició inicial dels arcs pot influir en el comportament de l'aleatorietat
+[  %% arrays amb les 8 coordenades seguides de cadascun dels 2 arcs que formen 1 tessel·la Truchet (cairó)
+ [1 0 0 1 1 2 2 1]  %% LL/sn | UR/ns
+ [0 1 1 0 2 1 1 2]  %% LL/ns | UR/sn
+ [1 0 0 1 2 1 1 2]  %% LL/sn | UR/sn
+ [0 1 1 0 1 2 2 1]  %% LL/ns | UR/ns
+ [0 1 1 2 2 1 1 0]  %% UL/sn | LR/ns
+ [1 2 0 1 1 0 2 1]  %% UL/ns | LR/sn
+ [1 2 0 1 2 1 1 0]  %% UL/ns | LR/ns
+ [0 1 1 2 1 0 2 1]  %% UL/sn | LR/sn
+] /totesTruchet exch def
+
+%%MENU
+%% cairons d'ample i alt de la figura aleatòria tessel·lada Truchet
+2
+/cairoX exch def
+2
+/cairoY exch def
+
+[  %% array de la matriu de cairons o figura aleatòria
+ %% loops creuats per trenar la trama i l'ordit de la figura tessel·lada Truchet
+ 0 2 cairoY 1 sub 2 mul
+ {  %% for per a cada línia de trama
+  /+Y exch def  %% sumador de les Y
+  [  %% array de la línia de trama
+   0 2 cairoX 1 sub 2 mul
+   {  %% for per a cada columna d'ordit
+    /+X exch def  %% sumador de les X
+    totesTruchet
+    rand 8 mod  %% ens donarà un índex entre 0 i 7
+    get dup   %% deixa a l'stack 1 dels 8 cairons possibles
+    4 4 getinterval /LRUR exch def  %% serà un arc LR o UR
+    0 4 getinterval /LLUL exch def  %% serà un arc LL o UL
+    [  %% arc LL o UL del cairó
+     0 1 3
+     {  %% for per cada índex de les coordenades de l'arc
+      dup LLUL exch get
+      [
+       {+X add}  %% sumem la X que li correspon a la coordenada de l'arc
+       {+Y add}  %% sumem la Y que li correspon a la coordenada de l'arc
+       {+X add}  %% sumem la X que li correspon a la coordenada de l'arc
+       {+Y add}  %% sumem la Y que li correspon a la coordenada de l'arc
+      ]
+      3 -1 roll get cvx exec
+     }for
+    ]
+    [  %% arc LR o UR del cairó
+     0 1 3
+     {  %% for per cada índex de les coordenades de l'arc
+      dup LRUR exch get
+      [
+       {+X add}  %% sumem la X que li correspon a la coordenada de l'arc
+       {+Y add}  %% sumem la Y que li correspon a la coordenada de l'arc
+       {+X add}  %% sumem la X que li correspon a la coordenada de l'arc
+       {+Y add}  %% sumem la Y que li correspon a la coordenada de l'arc
+      ]
+      3 -1 roll get cvx exec
+     }for
+    ]
+   }for  %% per cada columna d'ordit
+  ]  %% array de la línia de trama
+ }for  %% per cada línia de trama
+]  %% array de la figura o matriu de cairons aleatòria
+
+%%MENU EN MANUAL
+%% el format de 2x2 cairons Truchet és paradigmàtic perquè ens ofereix 16 variants gràfiques diferents (ídem a 2 bases d'ADN)
+%% i afegint-hi les variants de posició i sentit de l'arc (representables en color), arribaríem a 256 variants possibles
+pop
+[  %% 2x2 cairons comença amb un enllaç que toca a 2 vores
+ [ [1 2 0 1] [1 0 2 1]   [3 0 2 1] [4 1 3 2] ]
+ [ [0 3 1 4] [1 2 2 3]   [2 3 3 2] [4 3 3 4] ]
+]
+pop
+[  %% 2x2 cairons comença amb un xamfrà tancat i continua amb una rodona al centre tancada
+ [ [1 0 0 1] [2 1 1 2]   [3 2 2 1] [3 0 4 1] ]
+ [ [0 3 1 4] [1 2 2 3]   [2 3 3 2] [4 3 3 4] ]
+]
+%pop
+
+%% 2x2 cairons amb els 8 arcs possibles disposats amb una rodona central
+[  %% figura o matriu de cairons
+ [  %% línia de trama amb arcs encara per enllaçar
+  [0 1 1 0] [1 2 2 1]  %% cairó d'inici LL
+  [2 1 3 2] [3 0 4 1]  %% cairó LR
+ ]
+ [
+  [1 4 0 3]  %% baula d'1 sol arc
+  [2 3 1 2]
+  [2 3 1 2] [4 3 3 4]  %% cairó UR
+ ]
+]  %% matriu de cairons o figura que podem generar manualment o amb un algorisme aleatori
+pop
+
+dup length 1 sub /maxOrdit exch def  %% índex màxim per columna d'ordit Y
+dup 0 get length 1 sub /MAXi_ exch def  %% índex màxim per línia de trama X (totes tenen la mateixa estructura)
+
+%%MENU
+true  %% dibuixem?
+{
+ dup
+%%MENU
+ %% establim una escala pels mòduls
+ 100 /eScala exch def
+
+%%MENU
+ %% pintem el ventall que ens indica posició i sentit de l'arc o només fem la línia en negre?
+ true /8arcs exch def
+
+ %% deduïm el format de pàgina exacte a la matriu de cairons
+ <<
+   /PageSize
+   [
+    3 index 0 get  %length 1 sub 2 mul eScala mul  %% X
+    0 exch {length add}forall 4 div eScala mul
+    4 index length eScala mul 2 mul  %% Y
+   ]
+ >>setpagedevice
+
+ eScala dup scale  %% activem l'escala
+ 0 setlinewidth  %% treballem a zero per tal no ens afecti l'escala
+
+ /xOcairo 0 def  %% posició actual X de l'origen (LL) del cairó
+ /yOcairo 0 def  %% posició actual Y de l'origen (LL) del cairó
+ /id2en2 0 def  %% índex per fer saltar l'origen X del cairó
+
+ {  %% forall per a cadascuna de les línies de trama
+  {  %% forall per cadascuna de les arrays de coordenades de la línia de trama
+   dup /arabaula exch def length 1 sub 0 exch 4 exch
+   {  %% for que agrupa arcs en parells de coordenades (dos parells per arc / 4 valors)
+    %% deduïm l'orientació dels angles del Truchet
+    arabaula exch 4 getinterval
+    %% a quin xamfrà som?
+    %% en base a l'arc esquerra del cairó
+
+    %% primer deduïm si l'arc té el seu origen a baix o a dalt del cairó
+    dup 3 get 1 index 1 get 2 copy lt  %% quina és a Y més petita?
+    {
+     pop 
+    } 
+    {
+     exch pop
+    }ifelse
+    yOcairo sub 0 eq  %% si és 0 som a baix
+    {  %% té el seu origen a baix
+     dup 0 get 1 index 2 get 2 copy gt  %% quina és la X més gran?
+     {
+      pop
+     }
+     {
+      exch pop
+     }ifelse
+     xOcairo sub 2 eq  %% LL o LR?
+     {  %% si dista 2 som a LR
+      %% origen LR on l'arc pot anar de 90 a 180 o de 180 a 90
+      dup 0 get 1 index 2 get lt  %% si la X de la primera coordenada és més petita que la X de la segona
+      {  %% l'arc anirà de 180 a 90 (O/E) blau
+       8arcs
+       {
+        gsave 0 0 1 setrgbcolor pop newpath xOcairo 2 add yOcairo 2 copy moveto 1 180 90 arcn closepath fill grestore
+       }
+       {
+        gsave pop newpath xOcairo 2 add yOcairo 1 180 90 arcn stroke grestore
+       }ifelse
+%(LR_1)==
+      }
+      {  %% l'arc anirà de 90 a 180 (E/O) groc
+       8arcs
+       {
+        gsave 1 1 0 setrgbcolor pop newpath xOcairo 2 add yOcairo 2 copy moveto 1 90 180 arc closepath fill grestore
+       }
+       {
+        gsave pop newpath xOcairo 2 add yOcairo 1 90 180 arc stroke grestore
+       }ifelse
+%(LR_2)==
+      }ifelse
+     }
+     {  %% si dista 1 o 0 som a LL
+      %% origen LL on l'arc pot anar de 0 a 90 o de 90 a 0
+      dup 0 get 1 index 2 get gt  %% si la X de la primera coordenada és més gran que la X de la segona
+      {  %% l'arc anirà de 0 a 90 (E/O) cyan
+       8arcs
+       {
+        gsave 0 1 1 setrgbcolor pop newpath xOcairo yOcairo 2 copy moveto 1 0 90 arc closepath fill grestore
+       }
+       {
+        gsave pop newpath xOcairo yOcairo 1 0 90 arc stroke grestore
+       }ifelse
+%(LL_1)==
+      }
+      {  %% l'arc anirà de 90 a 0 (O/E) roig
+       8arcs
+       {
+        gsave 1 0 0 setrgbcolor pop newpath xOcairo yOcairo 2 copy moveto 1 90 0 arcn closepath fill grestore
+       }
+       {
+        gsave pop newpath xOcairo yOcairo 1 90 0 arcn stroke grestore
+       }ifelse
+%(LL_2)==
+      }ifelse
+     }ifelse
+    }
+    {  %% té el seu origen a dalt
+     dup 0 get 1 index 2 get 2 copy gt  %% quina és la X més gran?
+     {
+      pop
+     }
+     {
+      exch pop
+     }ifelse
+     xOcairo sub 2 eq  %% UL o UR?
+     {  %% si dista 2 som a UR
+      %% origen UR on l'arc pot anar de 180 a 270 o de 270 a 180
+      dup 0 get 1 index 2 get lt  %% si la X de la primera coordenada és més petita que la X de la segona
+      {  %% l'arc anirà de 180 a 270 (O/E) magenta
+       8arcs
+       {
+        gsave 1 0 1 setrgbcolor pop newpath xOcairo 2 add yOcairo 2 add 2 copy moveto 1 180 270 arc closepath fill grestore
+       }
+       {
+        gsave pop newpath xOcairo 2 add yOcairo 2 add 1 180 270 arc stroke grestore
+       }ifelse
+%(UR_1)==
+      }
+      {  %% l'arc anirà de 270 a 180 (E/O) verd
+       8arcs
+       {
+        gsave 0 1 0 setrgbcolor pop newpath xOcairo 2 add yOcairo 2 add 2 copy moveto 1 270 180 arcn closepath fill grestore
+       }
+       {
+        gsave pop newpath xOcairo 2 add yOcairo 2 add 1 270 180 arcn stroke grestore
+       }ifelse
+%(UR_2)==
+      }ifelse
+     }
+     {  %% si dista 1 o 0 som a UL
+      %% origen UL on l'arc pot anar de 270 a 0 o de 0 a 270
+      dup 0 get 1 index 2 get gt  %% si la X de la primera coordenada és més gran que la X de la segona
+      {  %% l'arc anirà de 0 a 270 (E/O) gris
+       8arcs
+       {
+        gsave .6 .6 .6 setrgbcolor pop newpath xOcairo yOcairo 2 add 2 copy moveto 1 0 270 arcn closepath fill grestore
+       }
+       {
+        gsave pop newpath xOcairo yOcairo 2 add 1 0 270 arcn stroke grestore
+       }ifelse
+%(UL_1)==
+      }
+      {  %% l'arc anirà de 270 a 0 (O/E) negre
+       8arcs
+       {
+        gsave 0 0 0 setrgbcolor pop newpath xOcairo yOcairo 2 add 2 copy moveto 1 270 0 arc closepath fill grestore
+       }
+       {
+        gsave pop newpath xOcairo yOcairo 2 add 1 270 0 arc stroke grestore
+       }ifelse
+%(UL_2)==
+      }ifelse
+     }ifelse
+    }ifelse
+
+    id2en2 1 eq
+    {
+     xOcairo 2 add /xOcairo exch def  %% actualitzem la posició X de l'origen (LL) del cairó
+     /id2en2 0 def
+    }
+    {
+     id2en2 1 add /id2en2 exch def
+    }ifelse
+   }for  %% que agrupa arcs en parells de coordenades (dos parells per arc / 4 valors)
+  }forall  %% per cadascuna de les arrays de coordenades de la línia de trama
+  /xOcairo 0 def  %% actualitzem la posició X de l'origen inicial del cairó
+  yOcairo 2 add /yOcairo exch def  %% actualitzem la posició Y de l'origen (LL) del cairó
+ }forall  %% per a cadascuna de les línies de trama
+
+ showpage
+}if  %% dibuixem detectant les 8 menes d'arc per posició i sentit?
+
+MAXi_ 1 ne  %% tret que NO sigui una figura d'1 sol cairó d'ample
+{  %% enllacem els arcs dels cairons en sentit trama
+ [ exch
+  {  %% forall per a cadascuna de les línies de trama
+   MAXi_ /MAXi exch def  %% el redefinim a cada línia de trama que llegim
+   %% anàlisi per lligar coordenades en horitzontal (cosir els arcs dels cairons en sentit trama)
+   /iArc 1 def  %% índex inicial de l'array de coordenades
+%dup ==
+   /caironsQueEnllacen exch def
+%(PASdFORALL)==
+   {  %% loop
+    %% les baules són 2 arrays de coordenades contígües que podem enllaçar
+    %% a cada volta de loop en comparem un parell fins que esgotem la línia (sortim del loop) 
+
+%{
+    caironsQueEnllacen iArc get /baula1 exch def
+    caironsQueEnllacen iArc 1 add get /baula2 exch def
+%}stopped {caironsQueEnllacen == MAXi == iArc == (PETAQUI)== quit}if
+
+%% hi ha 4 possibilitats que els 2 arcs enllacin
+    baula1 0 2 getinterval dup
+    baula2 0 2 getinterval
+
+%% com feia comparaarray.ps ens cal comparar element per element per deduïr que són idèntiques
+    /a1 exch def
+    /a2 exch def
+    0 1 a1 length 1 sub
+    {  %% for
+     dup a1 exch get exch a2 exch get eq
+     {
+      true
+     }
+     {
+      false
+     }ifelse
+    }for
+    a1 length 1 sub {and}repeat  %%1 que l'índex 0/1 de la baula1 coincideixi amb l'índex 0/1 de la baula2
+    {
+     [
+      [
+       baula1  %% ens cal invertir les coordenades de l'array
+       aload pop 4 -1 roll 4 -1 roll
+      ]
+      baula2
+     ]
+     MAXi array dup  %% la nova array per emmagatzemar l'enllaç i la resta d'arcs sense enllaçar
+     3 -1 roll iArc exch put  %% emmagatzemem l'enllaç
+     dup caironsQueEnllacen 0 iArc getinterval 0 exch putinterval  %% farcim el davant de l'array amb els arcs no intervinguts
+     dup MAXi iArc 1 add sub caironsQueEnllacen iArc 2 add 3 -1 roll getinterval  %% agafem els arcs no intervinguts de la cua
+     iArc 1 add exch putinterval
+%dup ==
+     /caironsQueEnllacen exch def  %% farcim la cua de l'array i desem
+     MAXi 1 sub /MAXi exch def iArc 1 add /iArc exch def  %% actualitzem
+%     (##1 l'índex 0/1 de la baula1 coincideix amb l'índex 0/1 de la baula2) ==  %pstack exit % quit
+     pop  %% eliminem la coordenada duplicada de la baula1
+    }
+    {  %%2 que l'índex 0/1 de la baula1 coincideixi amb l'índex 2/3 de la baula2
+     baula2 2 2 getinterval
+     %% com feia comparaarray.ps ens cal comparar element per element per deduïr que són idèntiques
+     /a1 exch def
+     /a2 exch def
+     0 1 a1 length 1 sub
+     {  %% for
+      dup a1 exch get exch a2 exch get eq
+      {
+       true
+      }
+      {
+       false
+      }ifelse
+     }for
+     a1 length 1 sub {and}repeat
+     {
+      [ baula2 baula1 ]  %% invertim els 2 arcs que enllacen dins una array
+      MAXi array dup  %% la nova array per emmagatzemar l'enllaç i la resta d'arcs sense enllaçar
+      3 -1 roll iArc exch put  %% emmagatzemem l'enllaç
+      dup caironsQueEnllacen 0 iArc getinterval 0 exch putinterval  %% farcim el davant de l'array amb els arcs no intervinguts
+      dup MAXi iArc 1 add sub caironsQueEnllacen iArc 2 add 3 -1 roll getinterval  %% agafem els arcs no intervinguts de la cua
+      iArc 1 add exch putinterval
+%dup ==
+      /caironsQueEnllacen exch def  %% farcim la cua de l'array i desem
+      MAXi 1 sub /MAXi exch def iArc 1 add /iArc exch def  %% actualitzem
+%      (##2 l'índex 0/1 de la baula1 coincideix amb l'índex 2/3 de la baula2) ==  %pstack exit % quit
+     }
+     {  %%3 que l'índex 2/3 de la baula1 coincideixi amb l'índex 0/1 de la baula2
+      baula1 2 2 getinterval baula2 0 2 getinterval
+      %% com feia comparaarray.ps ens cal comparar element per element per deduïr que són idèntiques
+      /a1 exch def
+      /a2 exch def
+      0 1 a1 length 1 sub
+      {  %% for
+       dup a1 exch get exch a2 exch get eq
+       {
+        true
+       }
+       {
+        false
+       }ifelse
+      }for
+      a1 length 1 sub {and}repeat
+      {
+       caironsQueEnllacen iArc 2 getinterval %% extraiem els 2 arcs que enllacen dins una array
+       MAXi array dup  %% la nova array per emmagatzemar l'enllaç i la resta d'arcs sense enllaçar
+       3 -1 roll iArc exch put  %% emmagatzemem l'enllaç
+       dup caironsQueEnllacen 0 iArc getinterval 0 exch putinterval  %% farcim el davant de l'array amb els arcs no intervinguts
+       dup MAXi iArc 1 add sub caironsQueEnllacen iArc 2 add 3 -1 roll getinterval  %% agafem els arcs no intervinguts de la cua
+       iArc 1 add exch putinterval
+%dup ==
+       /caironsQueEnllacen exch def  %% farcim la cua de l'array i desem
+       MAXi 1 sub /MAXi exch def iArc 1 add /iArc exch def  %% actualitzem
+%       (##3 l'índex 2/3 de la baula1 coincideix amb l'índex 0/1 de la baula2) ==  %pstack exit % quit
+      }
+      {  %%4 que l'índex 2/3 de la baula1 coincideixi amb l'índex 2/3 de la baula2
+       baula1 2 2 getinterval %dup
+       baula2 2 2 getinterval
+       %% com feia comparaarray.ps ens cal comparar element per element per deduïr que són idèntiques
+       /a1 exch def
+       /a2 exch def
+       0 1 a1 length 1 sub
+       {  %% for
+        dup a1 exch get exch a2 exch get eq
+        {
+         true
+        }
+        {
+         false
+        }ifelse
+       }for
+       a1 length 1 sub {and}repeat
+       {
+        [
+         baula1
+         baula2 aload pop 4 1 roll 4 1 roll 4 array astore  %% invertim la segona coordenada de la baula2
+        ]
+        MAXi array dup  %% la nova array per emmagatzemar l'enllaç i la resta d'arcs sense enllaçar
+        3 -1 roll iArc exch put  %% emmagatzemem l'enllaç
+        dup caironsQueEnllacen 0 iArc getinterval 0 exch putinterval  %% farcim el davant de l'array amb arcs no intervinguts
+        dup MAXi iArc 1 add sub caironsQueEnllacen iArc 2 add 3 -1 roll getinterval  %% agafem arcs no intervinguts de la cua
+        iArc 1 add exch putinterval
+%dup ==
+	/caironsQueEnllacen exch def  %% farcim la cua de l'array i desem
+        MAXi 1 sub /MAXi exch def iArc 1 add /iArc exch def  %% actualitzem
+%        (##4 l'índex 2/3 de la baula1 coincideix amb l'índex 2/3 de la baula2) ==  %pstack exit % quit
+       }
+       {  %% això no passarà mai!
+        MAXi iArc  caironsQueEnllacen %( !!!!)pstack quit
+        (##5 cap de les coordenades coincideix!)pstack quit
+       }ifelse
+      }ifelse
+     }ifelse
+    }ifelse
+
+%(VOLTAdeLOOP)==
+
+    MAXi iArc eq
+    {  %% sortim?
+     caironsQueEnllacen
+%dup ==
+     exit % quit
+    }if
+   }loop
+  }forall  %% per a cadascuna de les línies de trama
+ ]  %% desem totes les línies de trama amb els arcs dels cairons ja enllaçats (baules) però encara cada arc és dins un array
+}if  %% tret que NO sigui una figura d'1 sol cairó d'ample
+
+%% afegim els boolenis per la rutina de cosir?
+%%QUIN SENTIT TÉ marcar amb true si la primera coordenada està pe revisar i un segon true si també ho està la segona?
+false
+{
+[ exch
+ {  %% forall
+  [ exch
+  {  %% forall
+   dup length 4 eq
+   {
+    [ exch
+     true exch true exch
+     aload pop
+    ]
+   }
+   {
+    [ exch
+     true exch true exch
+      aload pop
+    ]
+   }ifelse
+  }forall
+  ]
+ }forall
+]
+}if
+
+%% deslliguem els arrays-arc que pertanyen a una mateixa baula
+%% o sigui, cada array després dels 2 boolenis durà 4 o 8 valors de coordenades (1 o 2 arcs lligats)
+%% així només necessitarem comparar l'xy de la primera coordenada (índex 2 i 3) i l'xy de la darrera (índex n-2 i n-1)
+[ exch
+ {  %% forall
+  [ exch
+   {  %% forall
+    [ exch
+     {  %% forall
+      dup type /arraytype eq
+      {
+       aload pop
+      }if
+     }forall
+    ]
+   }forall
+  ]
+ }forall
+]
+/figuraDeTramesCosides exch def
+
+%%COSIDORA
+/espiaTrames
+[  %% conduirà el punter cosidor entre trames
+ null  %% valor null (inactiu) o -1 (mou l'índex d'exploració a la trama anterior de l'actual)
+ null  %% valor null (inactiu) o 1 (mou l'índex d'exploració a la trama següent de l'actual)
+] def
+/espiaBaules
+[  %% conduirà el punter cosidor entre baules d'una mateixa trama
+ null  %% valor null (inactiu) o -1 (mou l'índex d'exploració a la baula anterior de la trama on som)
+ null  %% valor null (inactiu) (mou l'índex d'exploració a la mateixa baula de la trama on som)
+ null  %% valor null (inactiu) (mou l'índex d'exploració a la baula següent de la trama on som)
+] def
+
+%MAXi_ 1 add /maxTrama exch def
+%% definim les 4 vores de les coordenades la figura per detectar on comencen i acaben els traços oberts que cosim
+/minX 0 def /minY 0 def /maxX MAXi_ 1 add def /maxY maxOrdit 1 add 2 mul def
+
+%% hi desarem les coordenades dels cairons a mida que els anem cosint
+/caironsCosits [] def  %% o sigui 1 baula per traç tancat o que comenci i acabi als marges de la figura
+/nArcs 0 def  %% comptador d'arcs cosits (només comptem cada cop que tanquem un traç)
+
+%% mentre /Trama és la trama que explorem de forma seqüencial, /tramaCus és la trama on puntualment som ara
+%% i ens movem per seguir el cosit de les baules en tota la figura
+%% mentre /Baula és la baula que explorem de forma seqüencial dins de /Trama, /baulaCus és la baula on ens movem puntualment
+%% per seguir cosint les coordenades fins que tanquem la figura o tinguem els dos caps del traç tocant les vores de la figura
+
+0 1 maxOrdit
+{  %% for per totes les línies de /Trama
+
+%%HEM DE REFER EL MÈTODE DE DESAT DE figuraDeTramesCosides DONCS NO APAREIXEN ELS null QUE TOQUEN A LES BAULES LLEGIDES
+dup 1 eq{figuraDeTramesCosides(ETS A lA TRAMA 1)pstack quit}if
+
+ /iTrama exch def  %% índex de fil de trama
+ figuraDeTramesCosides iTrama get /Trama exch def
+ /iCus 0 def  %% índex de cosit en sentit ordit que no pot anar més enllà que maxOrdit (en realitat és un índex de trama)
+
+ 0 1 MAXi_
+%%CAL! ens cal un modificador de MAXi_ quan fem el tomb a explorar la trama d'índex 1
+(::::::::)pstack quit
+ {  %% for per a cada /Baula d'1 línia de trama
+  /ibaula exch def
+  Trama ibaula get
+  dup null eq
+  {  %% aquesta baula ja ha estat cosida i desada a /caironsCosits
+   pop
+  }
+  {
+   /Baula exch def
+
+   %% hem de definir el comportament d' /espiaTrames per l'índex de cada trama que analitzem
+   iTrama 0 eq  %% és la trama d'inici?
+   {  %% SOM a la trama d'inici
+    iTrama maxOrdit eq  %% és la trama final?
+    {
+     [  %% som en una figura de només 1 línia de trama
+      null  %% NO explorarem a la trama anterior a l'actual
+      null  %% tampoc NO explorarem a la trama següent a l'actual
+     ]
+    }
+    {
+     [
+      null  %% NO explorarem a la trama anterior a l'actual
+      1  %% explorarem a la trama següent a l'actual
+     ]
+    }ifelse
+    /espiaTrames exch def
+   }
+   {  %% NO som la trama d'inici
+    iTrama maxOrdit eq  %% és la trama final?
+    {  %% com que som a la darrera trama d'ordit
+     [
+      -1
+      null
+     ]
+     /espiaTrames exch def
+    }
+    {  %% som a una trama d'entremig
+     [
+      -1
+      1
+     ]
+     /espiaTrames exch def
+    }ifelse
+   }ifelse
+
+   %% hem de definir el comportament d' /espiaBaules per l'índex de cada baula que analitzem
+   ibaula 0 eq  %% és la baula d'inici?
+   {  %% SOM a la baula d'inici
+    ibaula MAXi_ eq  %% és a la baula final?
+    {
+     [  %% som en una figura d'1 sola columna d'ordit
+      null  %% NO explorarem a la baula anterior
+      0  %% NO explorarem a la mateixa baula
+      null  %% NO explorarem a la baula següent
+     ]
+    }
+    {
+     [
+      null  %% NO explorarem a la baula anterior
+      0  %% explorarem a la mateixa baula
+      1  %% explorarem a la baula següent
+     ]
+    }ifelse
+    /espiaBaules exch def
+   }
+   {  %% NO som a la baula d'inici
+    ibaula MAXi_ eq  %% és a la baula final?
+    {  %% com que som a la darrera baula de la trama
+     [
+      -1  %% explorarem a la baula anterior
+      0  %% explorarem a la mateixa baula
+      null  %% NO explorarem a la baula següent
+     ]
+     /espiaBaules exch def
+    }
+    {  %% som a una baula d'entremig
+     [
+      -1
+      0
+      1
+     ]
+     /espiaBaules exch def
+    }ifelse
+   }ifelse
+
+   /cosit false def  %% gatell pèr saber si hem cosit o no una baula
+   /tretDsortida true def  %% gatell per detectar que desem la primera coordenada d'un traç
+   /esClou true def  %% el traç es clou?
+   /xVora null def  %% hi ha un enter que ens diu on toca el traç que estem cosint o un null si no toca
+   /yVora null def
+
+%% el cosit dels cairons arrenglera els traç dels arcs en un mateix sentit, tancant o tocant vores, de manera que en el cas
+%% dels traços que toquin vores i quedin oberts els tancarem amb un nou algorisme que resseguirà els 4 costats de la figura
+
+   {  %% loop per cosir els arcs enllaçats entre cairons fins que tinguem un traç sencer (obert o tancat)
+    %% sortirem del loop quan els 2 extrems de la baula que cosim arribin a 1 de les 4 vores, no necessàriament diferent
+    %% a la vora de sortida o quan haguem tancat una figura (les coordenades del cap i la cua són idèntiques)
+
+%%TEST
+%Trama == espiaTrames == Baula == espiaBaules == 
+
+    espiaTrames
+    {  %% forall per cadascuna de les trames que podem explorar des d'on som
+     dup null eq
+     {  %% aquesta trama no es pot explorar o ja ho ha estat
+      pop
+     }
+     {  %% a quina trama explorem?
+      iTrama add figuraDeTramesCosides exch get /araTrama exch def %(aTRAMA)pstack quit
+      espiaBaules
+      {  %% forall per a cadascuna de les baules que podem explorar des d'on som
+       dup null eq
+       {  %% aquesta baula no es pot explorar o ja ho ha estat
+        pop
+       }
+       {  %% a quina baula explorem?
+        ibaula add /iaraBaula exch def
+        araTrama iaraBaula get /ARAbaula exch def
+
+        tretDsortida
+        {  %% és la primera baula d'un nou traç
+%%Possiblement aquest ifelse (tretDsortida/baula d'un nou traç) NO tingui cap sentit
+         Baula /laprimeraXY exch def
+         /tretDsortida false def
+         %% comprovem si alguna de les coordenades del cap i la cua de la baula comencen en 1 de les 4 vores
+         /xCAP false def /yCAP false def /xCUA false def /yCUA false def
+         %% si ho fa el cap i la cua voldrà dir que el traç ha finalitzat perquè pel cap i la cua toquen vores
+
+         %% ho fa alguna del cap?
+         Baula 0 2 getinterval  %% explorem la primera coordenada per ordre de vores
+         dup 1 get dup minY eq
+         {
+          /yVora exch def pop /yCAP true def
+         }
+         {
+          maxY eq
+          {
+	   maxY /yVora exch def
+           pop /yCAP true def
+          }
+          {
+           0 get dup maxX eq
+           {
+            /xVora exch def pop /xCAP true def
+           }
+           {
+            minX eq
+            {
+	     minX /xVora exch def
+             /xCAP true def
+            }if
+           }ifelse
+          }ifelse
+         }ifelse
+
+         %% ho fa alguna de la cua?
+         Baula 2 2 getinterval  %% explorem la darrera coordenada
+         dup 1 get dup minY eq
+         {
+          /yVora exch def pop /yCUA true def
+         }
+         {
+          maxY eq
+          {
+	   maxY /yVora exch def
+           pop /yCUA true def
+          }
+          {
+           0 get dup maxX eq
+           {
+            /xVora exch def pop /xCUA true def
+           }
+           {
+            minX eq
+            {
+	     minX /xVora exch def
+             /xCUA true def
+            }if
+           }ifelse
+          }ifelse
+         }ifelse
+         %% toca 2 vores o només 1 o cap
+         xCAP yCAP or xCUA yCUA or and
+         {  %% toca a 2 vores, llavors ja hem fet
+          %% un cop hem acabat un traç ens cal:
+          %% dins figuraDeTramesCosides posar un null a l'índex de la baula analitzada
+          figuraDeTramesCosides dup iTrama get ibaula null put dup == /figuraDeTramesCosides exch def
+          %% com que és d'1 sol arc, desem directament la /Baula a /caironsCosits
+          /baulesOrdides [] def  %% sense passar per /baulesOrdides que deixem buida per indicar que hem de començar un nou traç
+          caironsCosits dup length dup /araVa exch def 1 add array dup 0  4 -1 roll putinterval dup araVa
+          [
+           xVora yVora  %% ens diu on toca (comença i acaba) el traç que hem donat per enllestit
+           Baula aload pop
+          ]
+	  put /caironsCosits exch def
+(SOMAQUI tancant)==  %pstack quit
+          nArcs 2 add /nArcs exch def  %% comptador d'arcs cosits
+          %% hem de sortir:
+	  %% del forall de cadascuna de les trames i del loop de cosir 
+          /cosit true def  %% gatell pèr saber si hem cosit o no una baula
+          %% del forall de cadascuna de les baules,
+	  exit  %% per seguir dins el for de la /Baula següent dins la mateixa /Trama
+	 }
+         {  %% tocarà vores o serà un traç tancat?
+          /cosit false def  %% gatell pèr saber si hem cosit o no una baula
+          %% dins figuraDeTramesCosides posar un null a l'índex de la baula analitzada
+          figuraDeTramesCosides dup iTrama get ibaula null put dup == /figuraDeTramesCosides exch def
+	  [
+	   xVora yVora  %% ens diu on toca (comença) el traç que estem cosint (si no toca hi ha un null)
+           Baula aload pop
+          ] /baulesOrdides exch def  %% anirem afegint coordenades a mida que anem cosint
+
+          espiaTrames
+          {  %% forall per totes les trames que podem explorar
+           dup null eq
+           {  %% no fem res
+            pop
+           }
+           {  %% prenem la Trama que toqui
+            iTrama add dup /iTramaLlegim exch def
+            figuraDeTramesCosides exch get /tramaCus exch def
+            espiaBaules
+            {  %% forall per totes les baules que podem explorar
+             dup null eq
+             {  %% no fem res
+              pop
+             }
+             {  %% prenem la baula que toqui
+
+dup 0 eq {/ASA true def}{/ASA false def}ifelse
+
+              %% la nova baula que llegim enllaça amb baulesOrdides?
+              ibaula add dup /ibaulaLlegim exch def
+	      tramaCus exch get /baula2 exch def  %% no durà mai les 2 dades extres al davant
+              baulesOrdides dup length 2 sub 2 exch getinterval /baula1 exch def  %% sense les 2 dades extres del davant!
+%%AQUÍ CAL ACTIVAR LA RUTINA DE LES 4 POSSIBILITATS DE /baula1 i /baula2
+
+%% hi ha 4 possibilitats que els 2 arcs enllacin:
+    baula1 0 2 getinterval dup  %%1 que les dues primeres coordenades de la baula1
+    baula2 0 2 getinterval  %%1 coincideixin amb les dues primeres coordenades de la baula2
+
+%% com feia comparaarray.ps ens cal comparar element per element per deduïr que són idèntiques
+    /a1 exch def
+    /a2 exch def
+    0 1 a1 length 1 sub
+    {  %% for
+     dup a1 exch get exch a2 exch get eq
+     {
+      true
+     }
+     {
+      false
+     }ifelse
+    }for
+    a1 length 1 sub {and}repeat  %%1 que l'índex 0/1 de la baula1 coincideixi amb l'índex 0/1 de la baula2
+    {
+(##1 l'índex 0/1 de la baula1 coincideix amb l'índex 0/1 de la baula2) ==  %pstack exit % quit
+     [
+      [
+       baula1  %% ens cal invertir les coordenades de l'array
+       aload pop 4 -1 roll 4 -1 roll
+      ]
+      baula2
+     ]
+     MAXi array dup  %% la nova array per emmagatzemar l'enllaç i la resta d'arcs sense enllaçar
+     3 -1 roll iArc exch put  %% emmagatzemem l'enllaç
+     dup caironsQueEnllacen 0 iArc getinterval 0 exch putinterval  %% farcim el davant de l'array amb els arcs no intervinguts
+     dup MAXi iArc 1 add sub caironsQueEnllacen iArc 2 add 3 -1 roll getinterval  %% agafem els arcs no intervinguts de la cua
+     iArc 1 add exch putinterval
+%dup ==
+     /caironsQueEnllacen exch def  %% farcim la cua de l'array i desem
+     MAXi 1 sub /MAXi exch def iArc 1 add /iArc exch def  %% actualitzem
+     pop  %% eliminem la coordenada duplicada de la baula1
+    }
+    {  %%2 que l'índex 0/1 de la baula1 coincideixi amb els dos darrers índex in-1/in de la baula2
+(##2 l'índex 0/1 de la baula1 coincideix amb els dos darrers índex de la baula2) ==
+     baula2 dup length 2 sub 2 getinterval
+     %% com feia comparaarray.ps ens cal comparar element per element per deduïr que són idèntiques
+     /a1 exch def
+     /a2 exch def
+     0 1 a1 length 1 sub
+     {  %% for
+      dup a1 exch get exch a2 exch get eq
+      {
+       true
+      }
+      {
+       false
+      }ifelse
+     }for
+     a1 length 1 sub {and}repeat
+     {
+%%Cal posar el null que correspongui a l'array/baula de trama original que hem enllaçat
+      figuraDeTramesCosides dup iTramaLlegim get ibaulaLlegim null put dup == /figuraDeTramesCosides exch def
+
+%%On i quan ens cal avaluar que hem iniciat un nou traç i que  baulesOrdides és nova?
+
+      [ null null baula2 aload pop baula1 aload pop]
+      dup /baulesOrdides exch def  %% invertim els 2 arcs que enllacen dins el nou array
+
+%%Amb 2 o més baules que enllacen cal fer sempre la comprovació de si el traç es tanca en si mateix o toca vores
+      %% comprovem si la primera coordenada i la darrera coincideixen
+      dup 2 2 getinterval /a1 exch def
+      dup length 2 sub 2 getinterval /a2 exch def
+      0 1 1
+      {  %% for
+       dup a1 exch get exch a2 exch get eq
+       {
+        true
+       }
+       {
+        false
+       }ifelse
+      }for
+      and
+      {
+%%El mètode per comptar quants arcs té el traç que hem cosit
+       baulesOrdides length 2 sub 4 idiv nArcs add /nArcs exch def
+(ARCS del TRAC que hem tancat)
+       caironsCosits dup length dup /araVa exch def 1 add array dup 0 4 -1 roll putinterval dup araVa
+       baulesOrdides put /caironsCosits exch def
+%caironsCosits figuraDeTramesCosides(ESCLOU?)pstack quit
+%%No cal activar una nova revisió del comportament de TRAMES I BAULES perquè hem de sortir del loop cosidor
+       /cosit true def exit
+      }
+      {
+%%SI no tanca cal veure si toca cap vora, doncs hem de continuar cosint
+(NO ES TANCA EN SI MATEIX, pero toca cap vora?)pstack quit
+      }ifelse
+
+%ASA {figuraDeTramesCosides iTramaLlegim ibaulaLlegim (ARASOMAQUI seguint cosint)pstack quit}if
+
+%%Sospitem que MAXi iArc i caironsQueEnllacen ja no pintem res aquí doncs ens cal anar fent créixer baulesOrdides
+%MAXi array dup  %% la nova array per emmagatzemar l'enllaç i la resta d'arcs sense enllaçar
+
+%      3 -1 roll iArc exch put  %% emmagatzemem l'enllaç
+%      dup caironsQueEnllacen 0 iArc getinterval 0 exch putinterval  %% farcim el davant de l'array amb els arcs no intervinguts
+%      dup MAXi iArc 1 add sub caironsQueEnllacen iArc 2 add 3 -1 roll getinterval  %% agafem els arcs no intervinguts de la cua
+%      iArc 1 add exch putinterval
+%dup ==
+%      /caironsQueEnllacen exch def  %% farcim la cua de l'array i desem
+%      MAXi 1 sub /MAXi exch def iArc 1 add /iArc exch def  %% actualitzem
+
+     }
+     {  %%3 que els dos darrers índex de la baula1 coincideixi amb l'índex 0/1 de la baula2
+       (##3 els dos darrers índex de la baula1 coincideixen amb l'índex 0/1 de la baula2) ==  %pstack exit % quit
+      baula1 dup length 2 sub 2 getinterval baula2 0 2 getinterval
+      %% com feia comparaarray.ps ens cal comparar element per element per deduïr que són idèntiques
+      /a1 exch def
+      /a2 exch def
+      0 1 a1 length 1 sub
+      {  %% for
+       dup a1 exch get exch a2 exch get eq
+       {
+        true
+       }
+       {
+        false
+       }ifelse
+      }for
+      a1 length 1 sub {and}repeat
+      {
+       caironsQueEnllacen iArc 2 getinterval %% extraiem els 2 arcs que enllacen dins una array
+       MAXi array dup  %% la nova array per emmagatzemar l'enllaç i la resta d'arcs sense enllaçar
+       3 -1 roll iArc exch put  %% emmagatzemem l'enllaç
+       dup caironsQueEnllacen 0 iArc getinterval 0 exch putinterval  %% farcim el davant de l'array amb els arcs no intervinguts
+       dup MAXi iArc 1 add sub caironsQueEnllacen iArc 2 add 3 -1 roll getinterval  %% agafem els arcs no intervinguts de la cua
+       iArc 1 add exch putinterval
+%dup ==
+       /caironsQueEnllacen exch def  %% farcim la cua de l'array i desem
+       MAXi 1 sub /MAXi exch def iArc 1 add /iArc exch def  %% actualitzem
+      }
+      {  %%4 que els dos darrers índex de la baula1 coincideixin amb els dos darrers índex de la baula2
+(##4 els dos darrers índex de la baula1 coincideixen amb els dos darrers índex de la baula2) ==  %pstack exit % quit
+       baula1 dup length 2 sub 2 getinterval
+       baula2 dup length 2 sub 2 getinterval
+       %% com feia comparaarray.ps ens cal comparar element per element per deduïr que són idèntiques
+       /a1 exch def
+       /a2 exch def
+       0 1 a1 length 1 sub
+       {  %% for
+        dup a1 exch get exch a2 exch get eq
+        {
+         true
+        }
+        {
+         false
+        }ifelse
+       }for
+       a1 length 1 sub {and}repeat
+       {
+        [
+         baula1
+         baula2 aload pop 4 1 roll 4 1 roll 4 array astore  %% invertim la segona coordenada de la baula2
+        ]
+        MAXi array dup  %% la nova array per emmagatzemar l'enllaç i la resta d'arcs sense enllaçar
+        3 -1 roll iArc exch put  %% emmagatzemem l'enllaç
+        dup caironsQueEnllacen 0 iArc getinterval 0 exch putinterval  %% farcim el davant de l'array amb arcs no intervinguts
+        dup MAXi iArc 1 add sub caironsQueEnllacen iArc 2 add 3 -1 roll getinterval  %% agafem arcs no intervinguts de la cua
+        iArc 1 add exch putinterval
+%dup ==
+	/caironsQueEnllacen exch def  %% farcim la cua de l'array i desem
+        MAXi 1 sub /MAXi exch def iArc 1 add /iArc exch def  %% actualitzem
+       }
+       {  %% com que cap de les coordenades coincideix:
+       % MAXi iArc  caironsQueEnllacen %( !!!!)pstack quit
+        (##5 com que cap de les coordenades coincideix saltem a la seguent baula!)==
+       }ifelse
+      }ifelse
+     }ifelse
+    }ifelse
+%%FI de rutina de la 4 possibilitats
+%% si hi enllaça, sortim d'aquest forall i del de trames també via /cosit
+%% si NO enllaça, seguim amb el forall de baules
+%ibaula (COMPTADORdeCONTROL?)pstack quit
+             }ifelse
+            }forall  %% d'espiaBaules
+%(---AQUI convindria posar un comprovant que ens asseguri que SI que hem enllaçat amb una baula?)pstack quit
+           }ifelse
+           cosit  %% gatell per aturar l'exploració
+           {
+            exit
+           }if
+          }forall  %% un cop esgotat el forall de trames i de baules /cosit hauria d'estar a true o tocar vores!
+         }ifelse  %% tocarà vores o serà un traç tancat?
+%%Possiblement aquest ifelse NO tingui cap sentit
+%(tretDsortida/baula d'un nou trac)pstack quit
+        }
+        {  %% NO és la primera baula d'un nou traç
+         ibaula MAXi_ eq  %% explorem coordenades de la darrera baula o les d'entremig?
+         {  %% és la darrera baula de la trama que explorem
+%% com seguim?
+(!)pstack quit
+	 }
+         {  %% és una baula d'entremig de la trama que explorem
+%% com seguim?
+(&)pstack quit
+         }ifelse
+        }ifelse  %% és la primera baula d'un nou traç?
+
+%% si /cosit no és a true ha de voler dir que la darrera coordenada de /baulesOrdides hauria de tocar a una de les 4 vores
+%% si NO és així, tenim un nou problema a resoldre doncs haurà fallat alguna cosa dins la rutina de cosir
+%% cada vegada que lliguem un nou tram de baula haurem de refer /espiaTrames i /espiaBaules
+%% doncs quedarem situats en un nou context trama/baula
+
+     cosit  %% gatell per aturar l'exploració
+     {
+(EXIT de baules2)==
+      exit
+     }if
+
+       }ifelse  %% a quina baula explorem?
+%% aquí caldrà un gatell per saber si hem de sortir
+
+      }forall  %% per a cadascuna de les baules que podem explorar des d'on som
+     }ifelse  %% a quina trama explorem?
+%% aquí caldrà un gatell per saber si hem de sortir
+     cosit  %% gatell per aturar l'exploració
+     {
+(EXIT de trames)==
+      exit
+     }if
+
+    }forall  %% per cadascuna de les trames que podem explorar des d'on som
+%% aquí caldrà un gatell per saber si hem de sortir i començar un nou traç
+(volta de LOOP)==
+
+    cosit  %% gatell per aturar l'exploració
+    {
+(EXIT de LOOP)==
+     exit
+    }if
+
+   }loop  %% per resseguir cosint els arcs enllaçats entre cairons
+
+%% com deixem desat de si és un traç tancat o obert?
+
+%%EXCEPCIONS:
+  %% SI ÉS LA PRIMERA LÍNIA DE TRAMA
+  %% SI ÉS LA DARRERA LÍNIA DE TRAMA
+  %% SI ÉS LA PRIMERA BAULA DE LA LÍNIA DE TRAMA
+  %% SI ÉS LA DARRERA BAULA DE LA LÍNIA DE TRAMA
+
+%%ELS INDICADORS DE VORES
+%% a l'array /baulesOrdides que cus coordenades i que després desem a /caironsCosits hi afegirem 2 boolenis al principi
+%% que ens indicaran a quines vores comença i acaba el traçat d'arcs (per ordre en el sentit del traç) o si és un traç tancat
+%% si és un traç tancat, hi posarem dos null, p.e: [ null null # # ... ]
+%% si és obert, sempre tocarà a 2 vores, dues qualsevol (poden ser repetides) de les 4 possibles que seran:
+%% en sentit contrari de les agulles i començant per baix: minY, maxX, maxY, minX
+%% minX i minY sempre seran zero i maxX serà maxTrama +1 i maxY serà maxOrdit +1
+
+%%MOVIMENTS POSSIBLES:
+
+%%SIMPLIFICAT
+%% ja tenim lligades les baules en sentit trama i això fa que:
+%% totes les línies de trama tenen les mateixa quantitat de baules
+%% totes les baules d'idèntic índex, entre trames, tenen la mateixa quantitat d'elements (quatre o vuit valors)
+%% la primera i la darrera baula de cada trama tenen 4 valors, la resta d'entremig en tenen 8
+%% quan comencem a explorar un nou traç desarem la primera i la darrera coordenada de la baula per detectar si toquem vores
+%% si no toquem vores i fins que el traç no s'acabi d'explorar:
+  %% o vol dir començar i acabar en una de les 4 vores
+  %% o vol dir tancar-lo en sí mateix (NO haurà començat en cap de les 4 vores)
+%% explorarem tant la primera com la darrera coordenada de cada baula
+  %% a la trama de baix i a la trama de dalt
+    %% a la baula de l'índex anterior, del mateix índex i de l'índex posterior
+%% si HI HA coincidències
+%% si NO hi ha coincidències
+
+
+  }ifelse  %% la baula ja ha estat cosida?
+%  (!)pstack quit
+(VOLTA de FOR de BAULES d'1 linia de trama)==
+%     cosit  %% gatell per aturar l'exploració
+%     {
+%(EXIT de baules1)==
+%      exit
+%     }if
+ }for  %% per cadascuna de les baules d'1 línia de trama
+(VOLTA de FOR de TRAMES)==
+}for  %% per totes les línies de trama
+
