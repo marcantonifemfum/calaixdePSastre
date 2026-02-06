@@ -1,0 +1,464 @@
+%! Aacurat_mul.ps
+%% treballa multiplicant dos nombres reals dins dues arrays o dins dues strings, amb la sintaxi [[false # #][# #]] o (#.##)
+%% per retornar-ne el resultat també o dins d'una array o dins d'una string (similar a mul)
+%% posarem dos gatells per decidir si els nombres a computar i el seu resultat són arrays o strings
+%% les dimensions dels nombres reals a multiplicar, només estan restringides per les Implementation Limits del GS
+%% els límits els trobem en el nombre màxim d'elements a l'stack (800) o dins les arrays/strings (uns 16 milions)
+%% vegeu la darrera versió de l'intèrpret gs... https://www.ghostscript.com/doc/current/Language.htm#Implementation_limits
+%% sintaxi: [[false 1][0]] [[true 1 1][0 0 1]] false false Aacurat_mul /  (-11.0010000) (00011.001) true true Aacurat_mul
+%% gs -q -dNOSAFER -o out.pdf -sDEVICE=pdfwrite -c .setpdfwrite -f Aacurat_mul.ps
+
+/Aacurat_mul
+{
+ /dona exch def  %% true treballem strings de sortida / false treballem arrays de sortida
+ /Aa exch def  %% true treballem amb strings d'entrada / false treballem amb arrays d'entrada
+ /dgt 1 string def
+
+ exch  %% el primer nombre /1nmbr
+ dup
+
+%%Aa
+ Aa  %% true treballem amb strings / false treballem amb arrays
+ {  %% el primer nombre /1nmbr és una string
+  dup type /stringtype eq  %% ens assegurem que el gatell vs sintaxi s'adiuen
+  {
+   2 index type /stringtype ne  %% ens assegurem que el gatell vs sintaxi s'adiuen
+   {
+    (\n\n >>> aquest flag necessita treballar amb strings ...pleguem!\n\n)print flush quit
+   }if
+  }
+  {
+   (\n\n >>> aquest flag necessita treballar amb strings ...pleguem!\n\n)print flush quit
+  }ifelse
+
+%%  cvx exec  %% corríem el risc de limitcheck
+  %% la xifra ve dins una string
+
+%%  0 lt
+  %% és un nombre negatiu?
+  0 get 45 eq  %% se suposa que el signe menys serà l'ascii habitual
+  {
+   true  %% signe -
+  }
+  {  %% tret que sigui un fals positiu d'un zero negatiu (-0) (-0.00)
+   dup 0 get 45 eq  %% se suposa que el signe menys serà l'ascii habitual
+   %% true signe -
+   %% false signe +
+  }ifelse
+  exch
+  (.) search
+  %% fragmentem la part entera
+  {
+   exch pop  %% eliminem el punt decimal
+  }
+  {  %% afegim la part decimal a zero que no duu
+   (0) exch
+  }ifelse
+  mark exch  %% balisa de l'array d'enters
+  4 -1 roll exch  %% posem el signe al seu lloc
+  1 index  %% si és negatiu eliminem el signe de l'string
+  {
+   dup length 1 sub 1 exch getinterval
+  }if
+  %/dgt 1 string def 
+  {  %% forall per fragmentar dígit a dígit els enters
+   dgt exch 0 exch put dgt cvx exec
+  }forall
+  ]  %% tanquem l'array d'enters
+ }
+ {  %% traiem l'array d'enters
+  dup type /arraytype eq  %% ens assegurem que el gatell vs sintaxi s'adiuen
+  {
+   2 index type /arraytype ne  %% ens assegurem que el gatell vs sintaxi s'adiuen
+   {
+    (\n\n >>> aquest flag necessita treballar amb arrays ...pleguem!\n\n)print flush quit
+   }if
+  }
+  {
+   (\n\n >>> aquest flag necessita treballar amb arrays ...pleguem!\n\n)print flush quit
+  }ifelse
+  0 get
+ }ifelse
+
+ %% esporguem zeros a l'esquerra a l'array d'enters
+ /ZE 0 def  %% nombre zeros a l'esquerra a esporgar
+ dup length dup 1 sub /finS exch def 2 gt
+ {  %% només si hi ha més de 2 elements (signe i un dígit) té possibilitats de contenir-ne
+  1 1 finS
+  {
+   1 index exch get 0 eq
+   {
+    ZE 1 add /ZE exch def
+   }
+   {
+    exit
+   }ifelse 
+  }for
+  ZE 0 ne
+  {  %% hi ha zeros a l'esquerra
+   ZE finS eq
+   {  %% l'enter és un zero
+    0 get 0 2 array astore  %% refem l'array d'enters sense zeros a l'esquerra
+   }
+   {  %% l'enter NO és un zero
+    mark exch dup 0 get exch 1 ZE add finS ZE sub getinterval aload pop ]  %% refem l'array d'enters sense zeros a l'esquerra
+   }ifelse
+  }if
+ }if
+
+%%Aa
+ Aa  %% true treballem amb strings / false treballem amb arrays
+ {
+  exch mark exch
+  {  %% forall per fragmentar dígit a dígit els decimals
+   dgt exch 0 exch put dgt cvx exec
+  }forall
+ }
+ {
+  exch 1 get mark exch aload pop
+ }ifelse
+
+ counttomark dup /dcmls exch def 1 gt  %% sobren zeros a la dreta dels decimals?
+ {  %% esporguem zeros a la dreta a l'array decimal
+  /ndcmls 0 def
+  {  %% loop
+   dup 0 eq
+   {
+    pop
+    ndcmls 1 add /ndcmls exch def
+   }
+   {
+    exit
+   }ifelse
+  }loop
+  dcmls ndcmls eq
+  {  %% com que tot eren zeros, en deixem només un a l'array
+   0
+  }if
+ }if
+
+ ]  %% tanquem l'array decimal
+ 
+ %% primer nombre fragmentat i empaquetat
+ 2 array astore dup /1nmbr exch def
+ exch  %% /1nmbr a lloc
+
+%%Aa
+ Aa
+ {
+  dup
+%%  cvx exec  %% corríem el risc de limitcheck
+  %% la xifra ve dins una string
+%%  0 lt
+  %% és un nombre negatiu?
+  0 get 45 eq  %% se suposa que el signe menys serà l'ascii habitual
+  {
+   /esN true def  %% signe -
+  }
+  {  %% tret que sigui un fals positiu d'un zero negatiu (-0) (-0.00)
+   dup 0 get 45 eq  %% se suposa que el signe menys serà l'ascii habitual
+   /esN exch def  %% false signe + / true signe -
+  }ifelse
+  %% capturem el nombre a computar per fragmentar-lo a dígits
+  %% en realitat la part entera no caldria fragmentar-la, però això ens permetrà manegar nombres molt grans
+
+  %% encara que sigui un enter, sempre durà un primer decimal a zero
+  (.) search
+  %% fragmentem la part entera
+  {
+   exch pop  %% eliminem el punt decimal
+  }
+  {  %% afegim la part decimal a zero que no duu
+   (0) exch
+  }ifelse
+  mark exch  %% balisa de l'array d'enters
+  esN  %% si és negatiu eliminem el signe de l'string
+  {
+   dup length 1 sub 1 exch getinterval 
+  }if
+  esN exch  %% l'índex 0 de l'array d'enters és el signe
+  %/dgt 1 string def 
+  {  %% forall per fragmentar dígit a dígit els enters
+   dgt exch 0 exch put dgt cvx exec
+  }forall
+
+  ]  %% tanquem l'array d'enters
+ }
+ {  %% traiem l'array d'enters de 2nmbr
+  dup 0 get
+ }ifelse
+
+ %% esporguem zeros a l'esquerra a l'array d'enters
+ /ZE 0 def  %% nombre zeros a l'esquerra a esporgar
+ dup length dup 1 sub /finS exch def 2 gt
+ {  %% només si hi ha més de 2 elements (signe i un dígit) té possibilitats de contenir-ne
+  1 1 finS
+  {
+   1 index exch get 0 eq
+   {
+    ZE 1 add /ZE exch def
+   }
+   {
+    exit
+   }ifelse 
+  }for
+  ZE 0 ne
+  {  %% hi ha zeros a l'esquerra
+   ZE finS eq
+   {  %% l'enter és un zero
+    0 get 0 2 array astore  %% refem l'array d'enters sense zeros a l'esquerra
+   }
+   {  %% l'enter NO és un zero
+    mark exch dup 0 get exch 1 ZE add finS ZE sub getinterval aload pop ]  %% refem l'array d'enters sense zeros a l'esquerra
+  }ifelse
+  }if
+ }if
+
+%%Aa
+ Aa
+ {  %% string: fragmentem la part decimal
+  exch mark exch
+  {  %% forall per fragmentar dígit a dígit
+   dgt exch 0 exch put dgt cvx exec
+  }forall
+ }
+ {  %% array: desempaquetem la part decimal
+  exch 1 get mark exch aload pop
+ }ifelse
+
+ counttomark dup /dcmls exch def 1 gt  %% sobren zeros a la dreta dels decimals?
+ {  %% esporguem zeros a la dreta a l'array decimal
+  /ndcmls 0 def
+  {  %% loop
+   dup 0 eq
+   {
+    pop
+    ndcmls 1 add /ndcmls exch def
+   }
+   {
+    exit
+   }ifelse
+  }loop
+  dcmls ndcmls eq
+  {  %% com que tot eren zeros, en deixem només un a l'array
+   0
+  }if
+ }if
+
+ %% necessitem igualar els dígits, farcint amb zeros, dels enters (esquerra) i decimals (dreta) dels dos nombres a computar
+ %% farcim de zeros a la dreta igualant els dígits decimals a 2nmbr? (segon nombre)
+ counttomark 1nmbr 1 get length sub dup 0 lt
+ {
+  abs {0}repeat  %% farcim de zeros a la dreta igualant decimals a 2nmbr
+  /iglr_1nmbr false def
+ }
+ {
+  pop
+  /iglr_1nmbr true def  %% és al primer nombre (1nmbr) on haurem de farcir de zeros a la dreta igualant decimals
+ }ifelse
+ ]  %% tanquem l'array decimal
+ 2 array astore /2nmbr exch def  %% desem el paquet amb el segon nombre fragmentat (sumand o subtrahend)
+
+ %% hem de farcir de zeros a l'esquerra als enters de 1nmbr o 2nmbr?
+ dup 0 get length  %% enters+signe de 1nmbr
+ 2nmbr 0 get length  %% enters+signe de 2nmbr
+ sub dup 0 lt
+ {  %% és al 1nmbr on hem de farcir els enters
+  dup 0 eq
+  {  %% no fem re
+   pop
+  }
+  {  %% és al 1nmbr on hem de farcir els enters
+   abs dup dup 1 add /araVa exch def 2 index 0 get length add array dup  %% nou paquet d'enters
+   3 index 0 get 0 get 0 exch put  %% farcim el signe
+   exch 1 exch 1 exch
+   {  %% for per farcir de zeros a l'esquerra dels enters, després del signe
+    1 index exch 0 put
+   }for
+   dup 2 index 0 get dup length 1 sub 1 exch getinterval araVa exch putinterval
+   1 index exch 0 exch put  %% modifiquem l'array d'enters 1nmbr a l'stack
+  }ifelse
+ }
+ {  %% és al 2nmbr on hem de farcir els enters
+  dup dup 1 add /araVa exch def 2nmbr 0 get length add array dup  %% nou paquet d'enters
+  2nmbr 0 get 0 get 0 exch put  %% farcim el signe
+  exch 1 exch 1 exch
+  {  %% for per farcir de zeros a l'esquerra dels enters, després del signe
+   1 index exch 0 put
+  }for
+  dup 2nmbr 0 get dup length 1 sub 1 exch getinterval araVa exch putinterval
+  2nmbr exch 0 exch put  %% desem l'array d'enters a 2nmbr
+ }ifelse
+
+ iglr_1nmbr  %% igualem i farcim de zeros a la dreta decimals a 1nmbr?
+ {
+  dup 1 get length 2nmbr 1 get length ne
+  {
+   dup dup 1 get 2nmbr 1 get length exch length sub /0f exch def  %% nombre de zeros a farcir
+   1 get mark exch aload pop 0f {0}repeat ] 1 exch put  %% farcim a la dreta, tanquem i ho desem a lloc
+  }
+  {
+   pop
+  }ifelse
+ }
+ {
+  pop
+ }ifelse
+
+ %% computem la multiplicació
+ %% 1nmbr i 2nmbr són factors que donaran com a resultat un producte
+ 1nmbr 0 get 0 get
+ 2nmbr 0 get 0 get
+ eq /sgn exch def  %% deducció del signe
+ %% simplifiquem el primer factor sense el signe
+ /factor1 [ 1nmbr 0 get dup length 1 sub 1 exch getinterval aload pop 1nmbr 1 get aload pop ] def
+ %% simplifiquem el segon factor sense el signe
+ /factor2 [ 2nmbr 0 get dup length 1 sub 1 exch getinterval aload pop 2nmbr 1 get aload pop ] dup
+ %% tantes arrays sumadores com dígits tingui el factor 2nmbr (de fet ambdós estan igualats)
+ length dup array /asumadores exch def 1 sub /ias exch def def  %% índex invers per farcir l'array sumadora
+ factor2
+ {  %% forall que multiplica cadascun dels dígits enters+decimals del factor 2nmbr per 1nmbr desant el resultat a /asumadores
+  /2mul exch def  %% segon factor multiplicador
+  mark
+  factor1
+  {
+   2mul mul
+  }forall
+  ] asumadores exch ias exch put ias 1 sub /ias exch def
+ }forall
+ /rfp [] def  %% resultat final provisional
+ %% sumador escalat del resultat final provisional
+ asumadores 0 get length 1 sub /maxi exch def  %% el nombre d'arrays i columnes sumadores és idèntic
+ /ia 0 def  %% índex de la primera array sumadora per escalar la suma d'inici de columna
+ /ia_ara ia def  %% índex de l'array sumadora ara
+ /ic maxi def  %% índex d'inici de columna sumadora
+ /ic_ara ic def  %% índex de la columna sumadora ara
+ /csuma 0 def  %% restablim el resultat de la columna que suma
+ /nportem 0 def  %% cuantes en portem per la suma del dígit següent?
+ /colfeta 0 def  %% comptem les columnes que ja hem sumat el total
+ %% exemplifiquem l'estratègia de l'algorisme sobre l'exemple 231.0 x 23.0
+ %% tinguem en compte que ja hem igualat el nombre de dígits enters i decimals
+ %% la seqüència d'arrays computades dins /asumadores s'escalaria:
+ %%       0 0 0 0
+ %%     6 9 3 0
+ %%   4 6 2 0
+ %% 0 0 0 0
+ %% el loop que segueix suma aquest escalat d'arrays, donant com a resultat: 0 5 3 1 3 0 0
+ {  %% loop per a cada dígit de cada columna sumadora, de dalt a baix
+  %% traiem el dígit que toca de l'array sumadora que toca
+  asumadores ia_ara get ic_ara get csuma add /csuma exch def  %% columna que va sumant
+  %% sumem el total de la columna quan...
+  ic_ara maxi eq  %% si som al final de l'índex de la columna sumadora
+  ia_ara maxi eq  %% o quan som a qualsevol de les columnes de la darrera array sumadora
+  or
+  {  %% desem el valor del darrer dígit de la suma total i comptem quants en portem
+   csuma nportem add /csuma exch def  %% columna que suma
+   csuma 10 ge
+   {
+    csuma 1024 string cvs dup length dup 1 sub
+    2 index exch 1 getinterval cvx exec /csuma exch def  %% el darrer dígit és el resultat
+    1 sub 0 exch getinterval cvx exec /nportem exch def  %% i en portem a sumar tota la resta
+   }
+   {
+    /nportem 0 def
+   }ifelse
+
+   %% el dígit de la columna va al seu lloc (de dreta a esquerra) del resultat final provisional
+   rfp dup length 1 add array dup 3 -1 roll 1 exch putinterval dup 0 csuma put /rfp exch def
+
+   /csuma 0 def  %% restablim el resultat la columna que suma
+   ic 0 eq  %% si la darrera operació l'hem fet des del primer índex de la primera array sumadora...
+   {  %% canviem d'array inicial i actualitzem els índex de columna
+    /ic 0 def
+    /ic_ara ic def
+    ia 1 add /ia exch def
+    /ia_ara ia def
+   }
+   {
+    ic 1 sub /ic exch def  %% fem córrer l'índex d'inici de columna sumadora enrera
+    /ic_ara ic def  %% actualitzem
+    /ia_ara ia def  %% tornem a l'inci de l'array sumadora?
+   }ifelse
+  }
+  {
+   ic_ara 1 add /ic_ara exch def  %% fem córrer l'índex de columna sumadora endavant
+   ia_ara 1 add /ia_ara exch def  %% l'array sumadora següent
+  }ifelse
+
+  ic 0 eq  %% si arribem a l'extrem de la columna sumadora...
+  {  %% sortim?
+   ia 1 add maxi gt
+   {  %% hem acabat l'operació de multiplicar, ens cal fer la darrera operació, desem a rfp i sortim 
+    asumadores ia_ara get ic_ara get csuma add nportem add 1024 string cvs /scsuma exch def
+    scsuma length 1 sub -1 0
+    {
+     scsuma exch 1 getinterval cvx exec /csuma exch def
+     %% el dígit de la columna va al seu lloc (de dreta a esquerra) del resultat final provisional
+     rfp dup length 1 add array dup 3 -1 roll 1 exch putinterval dup 0 csuma put /rfp exch def
+    }for
+    exit
+   }if
+  }if
+
+ }loop  %% per a cada dígit de cada columna sumadora, de dalt a baix
+ [  %% desem el signe, enters i decimals a rsltt 
+  %% com que els dígits estan igualats amb qualsevol dels dos nombres podem deduir enters i decimals
+  1nmbr 1 get length 2 mul  %% nombre de decimals del resultat
+  rfp dup length 2 index sub 2 copy 0 exch getinterval dup  %% paquet dels enters
+  %% manipulem els array sense desfer-los doncs podrien ser molt grossos i provocar stackoverflow
+  length 1 add array dup 3 -1 roll 1 exch putinterval dup 0 sgn not put  %% integrem el signe als enters
+  4 1 roll 3 -1 roll getinterval  %% aquest és el paquet decimal
+ ] /rsltt exch def  %% resultat final
+
+%%Aa
+ dona
+ {  %% resultat com a string
+  %% passem el resultat d'array [[signe #ienters][#decimals]] a string (#.#)
+  rsltt 0 get dup /Aenters exch def dup 0 get
+  {  %% signe negatiu
+   /rSigne true def
+  }
+  {  %% signe positiu
+   /rSigne false def
+  }ifelse
+  length rsltt 1 get dup /Adecimals exch def length add rSigne {1 add}if string /Srsltt exch def
+  rSigne
+  {  %% afegim el signe negatiu si s'escau
+   Srsltt 0 (-) putinterval
+  }if
+  rSigne
+  {
+   Aenters length  %% índex on anirà el punt decimal
+  }
+  {
+   Aenters length 1 sub  %% índex on anirà el punt decimal
+  }ifelse
+  /puntD exch def  %% índex on anirà el punt decimal
+  1 1 Aenters length 1 sub
+  {  %% passem a string tots els dígits enters menys el signe
+   dup rSigne not{1 sub exch}if Aenters exch get 1 string cvs Srsltt 3 1 roll putinterval
+  }for
+  Srsltt puntD (.) putinterval  %% el punt decimal
+  0 1 Adecimals length 1 sub
+  {  %% passem a string tots els dígits decimals
+   dup puntD add 1 add exch Adecimals exch get 1 string cvs Srsltt 3 1 roll putinterval
+  }for
+  %% deixem a l'stack el resultat /rsltt a string
+  Srsltt
+ }
+ {  %% resultat com array
+  rsltt
+ }ifelse
+
+}bind def
+
+%(-0) (-0)
+%(1.001) (-1.011)
+%[[false 0 0 1][ 0 0 1 0 0]] [[true 0 1][ 0 1 1 0 0 0 0 0 0 0 0]]
+%(231) (23)
+%(1) (2)
+%(9)(8)
+%false  %% d'entrada: llegim de l'stack arrays (false) / strings (true)
+%true  %% de sortida: deixem a l'stack strings (true) / arrays (false)
+%Aacurat_mul (v)pstack
+

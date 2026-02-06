@@ -1,0 +1,691 @@
+%! acurat_div.ps
+%% treballa dividint dos nombres reals dins dues strings per retornar-ne el resultat també dins una string (similar a add)
+%% podríem posar uns gatells per cecidir si els nombres a computar i el seu resultat són strings o arrays
+%% les dimensions dels nombres reals a restar, només estan restringides per les Implementation Limits del GS
+%% els límits els trobem en el nombre màxim d'elements a l'stack (800) o dins les arrays/strings (uns 16 milions)
+%% vegeu la darrera versió de l'intèrpret gs... https://www.ghostscript.com/doc/current/Language.htm#Implementation_limits
+%% (-1.0000) (-1.0000) acurat_div
+
+/acurat_div
+{
+ exch  %% algorisme per fragmentar i empaquetar el primer nombre /1nmbr
+ dup
+ cvx exec  %% la xifra ve dins una string
+ 0 lt  %% és un nombre negatiu?
+ {
+  true  %% signe -
+ }
+ {  %% tret que sigui un fals positiu d'un zero negatiu (-0) (-0.00)
+  dup 0 get 45 eq  %% se suposa que el signe menys serà l'ascii habitual
+  %% true signe -
+  %% false signe +
+ }ifelse
+ exch
+ (.) search
+ %% fragmentem la part entera
+ {
+  exch pop  %% eliminem el punt decimal
+ }
+ {  %% afegim la part decimal a zero que no duu
+  (0) exch
+ }ifelse
+ mark exch  %% balisa de l'array d'enters
+ 4 -1 roll exch  %% posem el signe al seu lloc
+ 1 index  %% si és negatiu eliminem el signe de l'string
+ {
+  dup length 1 sub 1 exch getinterval
+ }if
+ /dgt 1 string def 
+ {  %% forall per fragmentar dígit a dígit els enters
+  dgt exch 0 exch put dgt cvx exec
+ }forall
+ ]  %% tanquem l'array d'enters
+
+ %% esporguem zeros a l'esquerra a l'array d'enters
+ /ZE 0 def  %% nombre zeros a l'esquerra a esporgar
+ dup length dup 1 sub /finS exch def 2 gt
+ {  %% només si hi ha més de 2 elements (signe i un dígit) té possibilitats de contenir-ne
+  1 1 finS
+  {
+   1 index exch get 0 eq
+   {
+    ZE 1 add /ZE exch def
+   }
+   {
+    exit
+   }ifelse 
+  }for
+  ZE 0 ne
+  {  %% hi ha zeros a l'esquerra
+   ZE finS eq
+   {  %% l'enter és un zero
+    0 get 0 2 array astore  %% refem l'array d'enters sense zeros a l'esquerra
+   }
+   {  %% l'enter NO és un zero
+    mark exch dup 0 get exch 1 ZE add finS ZE sub getinterval aload pop ]  %% refem l'array d'enters sense zeros a l'esquerra
+   }ifelse
+  }if
+ }if
+
+ exch mark exch
+ {  %% forall per fragmentar dígit a dígit els decimals
+  dgt exch 0 exch put dgt cvx exec
+ }forall
+
+ counttomark dup /dcmls exch def 1 gt  %% sobren zeros a la dreta dels decimals?
+ {  %% esporguem zeros a la dreta a l'array decimal
+  /ndcmls 0 def
+  {  %% loop
+   dup 0 eq
+   {
+    pop
+    ndcmls 1 add /ndcmls exch def
+   }
+   {
+    exit
+   }ifelse
+  }loop
+  dcmls ndcmls eq
+  {  %% com que tot eren zeros, en deixem només un a l'array
+   0
+  }if
+ }if
+
+ ]  %% tanquem l'array decimal
+ 
+ %% primer nombre fragmentat i empaquetat
+ 2 array astore dup /1nmbr exch def
+ exch  %% /1nmbr a lloc
+
+ dup
+ cvx exec  %% la xifra ve dins una string
+ 0 lt  %% és un nombre negatiu?
+ {
+  /esN true def  %% signe -
+ }
+ {  %% tret que sigui un fals positiu d'un zero negatiu (-0) (-0.00)
+  dup 0 get 45 eq  %% se suposa que el signe menys serà l'ascii habitual
+  /esN exch def  %% false signe + / true signe -
+ }ifelse
+ %% capturem el nombre a computar per fragmentar-lo a dígits
+ %% en realitat la part entera no caldria fragmentar-la, però això ens permetrà manegar nombres molt grans
+
+ %% encara que sigui un enter, sempre durà un primer decimal a zero
+ (.) search
+ %% fragmentem la part entera
+ {
+  exch pop  %% eliminem el punt decimal
+ }
+ {  %% afegim la part decimal a zero que no duu
+  (0) exch
+ }ifelse
+ mark exch  %% balisa de l'array d'enters
+ esN  %% si és negatiu eliminem el signe de l'string
+ {
+  dup length 1 sub 1 exch getinterval 
+ }if
+ esN exch  %% l'índex 0 de l'array d'enters és el signe
+ /dgt 1 string def 
+ {  %% forall per fragmentar dígit a dígit els enters
+  dgt exch 0 exch put dgt cvx exec
+ }forall
+
+ ]  %% tanquem l'array d'enters
+
+ %% esporguem zeros a l'esquerra a l'array d'enters
+ /ZE 0 def  %% nombre zeros a l'esquerra a esporgar
+ dup length dup 1 sub /finS exch def 2 gt
+ {  %% només si hi ha més de 2 elements (signe i un dígit) té possibilitats de contenir-ne
+  1 1 finS
+  {
+   1 index exch get 0 eq
+   {
+    ZE 1 add /ZE exch def
+   }
+   {
+    exit
+   }ifelse 
+  }for
+  ZE 0 ne
+  {  %% hi ha zeros a l'esquerra
+   ZE finS eq
+   {  %% l'enter és un zero
+    0 get 0 2 array astore  %% refem l'array d'enters sense zeros a l'esquerra
+   }
+   {  %% l'enter NO és un zero
+    mark exch dup 0 get exch 1 ZE add finS ZE sub getinterval aload pop ]  %% refem l'array d'enters sense zeros a l'esquerra
+  }ifelse
+  }if
+ }if
+
+ %% fragmentem la part decimal
+ exch mark exch
+ {  %% forall per fragmentar dígit a dígit
+  dgt exch 0 exch put dgt cvx exec
+ }forall
+
+ counttomark dup /dcmls exch def 1 gt  %% sobren zeros a la dreta dels decimals?
+ {  %% esporguem zeros a la dreta a l'array decimal
+  /ndcmls 0 def
+  {  %% loop
+   dup 0 eq
+   {
+    pop
+    ndcmls 1 add /ndcmls exch def
+   }
+   {
+    exit
+   }ifelse
+  }loop
+  dcmls ndcmls eq
+  {  %% com que tot eren zeros, en deixem només un a l'array
+   0
+  }if
+ }if
+
+ %% necessitem igualar els dígits, farcint amb zeros, dels enters (esquerra) i decimals (dreta) dels dos nombres a computar
+ %% farcim de zeros a la dreta igualant els dígits decimals a 2nmbr? (segon nombre)
+ counttomark 1nmbr 1 get length sub dup 0 lt
+ {
+  abs {0}repeat  %% farcim de zeros a la dreta igualant decimals a 2nmbr
+  /iglr_1nmbr false def
+ }
+ {
+  pop
+  /iglr_1nmbr true def  %% és al primer nombre (1nmbr) on haurem de farcir de zeros a la dreta igualant decimals
+ }ifelse
+ ]  %% tanquem l'array decimal
+ 2 array astore /2nmbr exch def  %% desem el paquet amb el segon nombre fragmentat (sumand o subtrahend)
+
+ %% hem de farcir de zeros a l'esquerra als enters de 1nmbr o 2nmbr?
+ dup 0 get length  %% enters+signe de 1nmbr
+ 2nmbr 0 get length  %% enters+signe de 2nmbr
+ sub dup 0 lt
+ {  %% és al 1nmbr on hem de farcir els enters
+  dup 0 eq
+  {  %% no fem re
+   pop
+  }
+  {  %% és al 1nmbr on hem de farcir els enters
+   abs dup dup 1 add /araVa exch def 2 index 0 get length add array dup  %% nou paquet d'enters
+   3 index 0 get 0 get 0 exch put  %% farcim el signe
+   exch 1 exch 1 exch
+   {  %% for per farcir de zeros a l'esquerra dels enters, després del signe
+    1 index exch 0 put
+   }for
+   dup 2 index 0 get dup length 1 sub 1 exch getinterval araVa exch putinterval
+   1 index exch 0 exch put  %% modifiquem l'array d'enters 1nmbr a l'stack
+  }ifelse
+ }
+ {  %% és al 2nmbr on hem de farcir els enters
+  dup dup 1 add /araVa exch def 2nmbr 0 get length add array dup  %% nou paquet d'enters
+  2nmbr 0 get 0 get 0 exch put  %% farcim el signe
+  exch 1 exch 1 exch
+  {  %% for per farcir de zeros a l'esquerra dels enters, després del signe
+   1 index exch 0 put
+  }for
+  dup 2nmbr 0 get dup length 1 sub 1 exch getinterval araVa exch putinterval
+  2nmbr exch 0 exch put  %% desem l'array d'enters a 2nmbr
+ }ifelse
+
+ iglr_1nmbr  %% igualem i farcim de zeros a la dreta decimals a 1nmbr?
+ {
+  dup 1 get length 2nmbr 1 get length ne
+  {
+   dup dup 1 get 2nmbr 1 get length exch length sub /0f exch def  %% nombre de zeros a farcir
+   1 get mark exch aload pop 0f {0}repeat ] 1 exch put  %% farcim a la dreta, tanquem i ho desem a lloc
+  }
+  {
+   pop
+  }ifelse
+ }
+ {
+  pop
+ }ifelse
+
+ %% primer ens cal saber quin dels dos nombres és el més gran sense signe (absolut)
+ %% 1abs = true = el més gran es 1nmbr / 1abs = false = el més gran és 2nmbr
+ %% comparem enters
+ /gls true def  %% són iguals?
+ 1 1 1nmbr 0 get length 1 sub
+ {  %% for
+  dup 1nmbr 0 get exch get
+  exch 2nmbr 0 get exch get
+  2 copy eq
+  {
+   pop pop
+  }
+  {
+   /gls false def  %% NO són iguals
+   gt /1abs exch def  %% flag de si és més gran 1nmbr (true) o 2nmbr (false)
+   exit
+  }ifelse
+ }for
+ %% només si els enters són iguals comparem decimals
+ gls
+ {
+  /gls true def  %% són iguals?
+  0 1 1nmbr 1 get length 1 sub
+  {
+   dup 1nmbr 1 get exch get
+   exch 2nmbr 1 get exch get
+   2 copy eq
+   {
+    pop pop
+   }
+   {
+    /gls false def  %% NO són iguals
+    gt /1abs exch def  %% flag de si és més gran 1nmbr (true) o 2nmbr (false)
+    exit
+   }ifelse
+  }for
+ }if
+
+ %% computem la divisió
+   %% 1nmbr és el dividend i 2nmbr és el divisor que donaran com a resultat un quocient
+   1nmbr 0 get 0 get
+   2nmbr 0 get 0 get
+   eq /sgn exch def  %% deducció del signe del quocient
+   %% descartem la divisió per zero (quocient indeterminat/infinit)
+   %% simplifiquem el divisor sense el signe ni decimals (tot en 1 sola array)
+   [ 2nmbr 0 get dup length 1 sub 1 exch getinterval aload pop 2nmbr 1 get aload pop ] dup
+   0 exch
+   {
+    add
+   }forall
+   0 eq
+   {
+    pop (\n\n ...divisió per zero, pleguem!\n\n)print flush quit
+   }
+   {
+    /dvsr exch def  %% farem l'operació sense decimals i deixant pel final on posar el punt decimal al seu lloc
+    %% simplifiquem el dividend sense el signe ni decimals (tot en 1 sola array)
+    /dvdnd [ 1nmbr 0 get dup length 1 sub 1 exch getinterval aload pop 1nmbr 1 get aload pop ] def
+
+%    %% purguem els zeros a l'esquerra del dividend
+%    /nz 0 def  %% nombre de zeros a l'esquerra a purgar
+%    dvdnd
+%    {
+%     0 eq
+%     {
+%      nz 1 add /nz exch def
+%     }
+%     {
+%      exit
+%     }ifelse
+%    }forall
+%    nz 0 ne
+%    {
+%     dvdnd dup length nz sub nz exch getinterval /dvdnd exch def
+%    }if
+
+dvdnd dvsr (AaAaA)pstack quit
+    %% dividend i divisor tindran incialment sempre la mateixa llargada
+    dvdnd length /Lnmbrs exch def
+
+    %% casos de divisions a tenir en compte (on ja hem igualat els dígits):
+    %% 1.000 / 2.345  = 0.42643923240938 el dividend més petit que el divisor
+    %% 009.1 / 876.5 = 0.01038220193953 igualem en zeros els enters del dividend
+    %% 3.200 / 2.013 = 1.58966716343766 el dividend és més gran que el divisor
+    %% 123.45 / 006.01 = 20.54076539101498 igualem en zeros els enters del divisor
+    %% 1.0 / 7.0 divisió d'enters amb resultat infinit 0.142857142857 on 142857 es repeteix indefinidament
+    %% 01.0 / 60.0 divisió amb resultat infinit de 6 a 0.016666...
+    %% les del exemple de youtube... https://www.youtube.com/watch?v=K8GdGZUEAYo
+    %% 13.34 / 2.30 = 5.8
+    %% 468.0 / 001.8 = 260.0
+    %% 24.5 / 07.0 = 3.5
+    %% 2.0 / 4.0 = 0.5
+    %% 123456789 / 9.876 = 12500687.42405832320778
+    %% 1234567890 / 0.123 = 10037137317.07317073170732
+
+    %% fem la descripció algorísmica de com dividir:
+    %%0 haurem d'operar des de les arrays /dvnd i /dvsr amb tota la llargarda zeros a l'esquerra que hi hagi
+    %%1 dividend (/dvdnd) i divisor (/dvsr) tindran sempre la mateixa llargada, comparem primer quin és més gran
+    /mEnter 19 def  %% màxim nombre de dígits d'un enter que, sense alterar-se, l'intèrpret GS pot manegar
+    /Zqcnt true def  %% afegim un zero al quocient resultant i és més gran el divisor?
+    /iDcml 0 def  %% serà l'índex a partir del qual hi hauran els decimals al /qcnt resultant
+    0 1 Lnmbrs 1 sub
+    {  %% for per saber si els dos nombres són iguals i per afegir zeros, si s'escau, al quocient resultant
+     dup dvdnd exch get
+     exch dvsr exch get
+     2 copy ne
+     {  %% quin és més gran?
+      gt
+      {  %% és més gran el divident
+       /Zqcnt false def  %% ara no afegim un zero al quocient
+      }if
+      /idems false def  %% els dos nombres són iguals?
+      exit
+     }
+     {
+      pop pop
+      /idems true def  %% els dos nombres són iguals?
+     }ifelse
+    }for
+    idems
+    {  %% si els dos nombres són iguals
+     %% el resultat serà sempre 1 i ja hem acabat
+     /rsltt [[sgn not 1][0]] def
+    }
+    {  %% els dos nombres (dividend i divisor) no són iguals
+     %%3 quan encetem decimals del quocient deixarem de sumar enters a /iDcml
+     /qcnt [] def  %% resultat del quocient, dígit a dígit
+     %%4 si no ho és, ampliem l'string del dividend al següent dígit pescant-lo a /dvdnd
+     %%5 si això no és possible (perquè no hi ha més dígits a /dvdnd) anem a ?
+     %%6 hem de repetir %3 fins que això sigui possible? farcint de zeros entremig?
+     %%7 quan /Ndivident > /Ndivisor dividim, desem el /residu, desant la part sencera div/cvi (1 valor de quocient!)
+     %%8 multipliquem aquesta part sencera per /Ndivisor i restem pel /residu
+     %%9 repetim %7 i %8 fins que s'acabin els dígits a /Ndivident (i anem desant els dígits del quocient resultant!)
+     %%10 si el darrer /residu és zero, la divisió acaba aquí i no hi ha decimals al quocient
+     %%11 si el darrer /residu no és zero, llavors desem aquest índex doncs serà la posisicó del decimal al quocient
+     %%12 i afegim un zero al /residu i repetim %7 i %8 fins que /residu sigui zero o topem amb un màxim de decimals previst
+
+     %% filtrem abans d'operar pel límit que tenim dels nombres enters (/mEnter ara a 19 dígits)
+     %% al length li hem de purgar els zeros a l'esquerra
+     /ZEdvdnd 0 def  %% comptem els zeros a l'esquerra del dividend si volem afinar el retall de xifres massa llargues
+     /ZEdvsr 0 def  %% comptem els zeros a l'esquerra del divisor si volem afinar el retall de xifres massa llargues
+     Lnmbrs mEnter gt
+     {  %% si té més de dinou dígits (màxim estable per a un enter dins l'intèrpret gs)
+      Lnmbrs
+      dvdnd
+      {  %% forall
+       0 eq
+       {
+        1 sub
+        ZEdvdnd 1 add /ZEdvdnd exch def
+       }
+       {
+        %/Ldvdnd exch def  %% potser no cal desar el length brut del dividend
+        exit
+       }ifelse
+      }forall
+      mEnter gt
+      {
+       (\n\n >>> el dividend opera amb enters de més de 19 dígits ...aviam!\n\n)print flush  %% dvdnd == quit
+       /SBRXdvdnd true def
+      }
+      {
+       /SBRXdvdnd false def
+      }ifelse
+      Lnmbrs
+      dvsr
+      {  %% forall
+       0 eq
+       {
+        1 sub
+        ZEdvsr 1 add /ZEdvsr exch def
+       }
+       {
+        %/Ldvdnd exch def  %% potser no cal desar el length brut del dividend
+        exit
+       }ifelse
+      }forall
+      mEnter gt
+      {
+       (\n\n >>> el divisor opera amb enters de més de 19 dígits ...aviam!\n\n)print flush  %% dvsr == quit
+       /SBRXdvsr true def
+      }
+      {
+       /SBRXdvsr false def
+      }ifelse
+     }
+     {
+      /SBRXdvsr false def
+      /SBRXdvdnd false def
+     }ifelse
+
+     /icops 0 def  %% test
+     /idvdnd null def
+     /iEnters true def  %% gatell per sumar l'índex on acaben els enters de /qcnt
+     /rM 0 def  %% valor inocu?
+
+%{ %stopped
+     {  %% loop de l'algorisme divisor
+      %%2 farcirem 1 zero a la cua del /dvdnd quan aquest sigui més petit que /dvsr i un altre a la cua de /qcnt
+      Zqcnt
+      {  %% és més gran el divisor
+       dvdnd dup length dup /araVa exch def 1 add array dup 3 -1 roll 0 exch putinterval dup araVa 0 put /dvdnd exch def
+       %% i un altre zero a l'esquerra del divisor per igualar els dígits
+       dvsr length 1 add array dup dup 0 0 put 1 dvsr putinterval /dvsr exch def
+       icops 0 eq
+       {  %% serà una divisió que donarà 0.# i afegim un zero al quocient
+        qcnt dup length dup /araVa exch def 1 add array dup 3 -1 roll 0 exch putinterval dup araVa 0 put /qcnt exch def
+       }if
+       /iEnters false def  %% gatell per sumar l'índex on acaben els enters de /qcnt
+      }if
+      /Zqcnt true def  %% afegim un zero al quocient?
+
+%%Test
+%      icops 0 eq
+%      {
+%       dvdnd dvsr qcnt 1nmbr 2nmbr (vvvvv)pstack quit
+%      }if
+
+      0 1 dvsr length 1 sub
+      {  %% for
+       dup dvdnd exch get
+       exch dvsr exch get
+       2 copy ne
+       {  %% quin és més gran?
+        gt
+        {  %% és més gran el divident
+         /Zqcnt false def  %% ara no afegim un zero al quocient
+        }if
+        /idems false def  %% els dos nombres són iguals?
+        exit
+       }
+       {
+        pop pop
+        /idems true def  %% els dos nombres són iguals?
+       }ifelse
+      }for
+
+      Zqcnt
+      {  %% afegim un zero al quocient
+       qcnt dup length dup /araVa exch def 1 add array dup 3 -1 roll 0 exch putinterval dup araVa 0 put /qcnt exch def
+      }if
+
+      Zqcnt not
+      {  %% a partir del moment que el dividend és més gran, ja podem passar el valor d'array a string
+       0 1 dvdnd length dup dup string /Sdvdnd exch def string /Sdvsr exch def 1 sub
+       {  %% passem el valor d'array del dividend i el divisor a string
+        dup Sdvdnd exch dup dvdnd exch get 1 string cvs putinterval
+        Sdvsr exch dup dvsr exch get 1 string cvs putinterval
+       }for
+
+%false
+%{
+       %% fem l'anàlisi de zeros a la dreta per afinar l'igualat del length a /Ndvdnd i /Ndvsr i no superar mai mEnter
+       /ZDdvdnd 0 def  %% comptem els zeros a la dreta del dividend si volem afinar el retall de xifres massa llargues
+       Sdvdnd length 1 sub -1 0
+       {  %% for
+        Sdvdnd exch get
+        48 eq
+        {
+         ZDdvdnd 1 add /ZDdvdnd exch def
+        }
+        {
+         exit
+        }ifelse
+       }for
+       /ZDdvsr 0 def  %% comptem els zeros a la dreta del divisor si volem afinar el retall de xifres massa llargues
+       Sdvsr length 1 sub -1 0
+       {  %% for
+        Sdvsr exch get
+        48 eq
+        {
+         ZDdvsr 1 add /ZDdvsr exch def
+        }
+        {
+         exit
+        }ifelse
+       }for
+
+       ZDdvdnd ZDdvsr lt
+       {  %% si és més petit el nombre de zeros a la dreta del dividend, els hi traiem a l'string del divisor
+        Sdvsr dup length ZDdvdnd sub 0 exch getinterval /Sdvsr exch def
+        %% i també al propi dividend
+        Sdvdnd dup length ZDdvdnd sub 0 exch getinterval /Sdvdnd exch def
+       }
+       {  %% si és més petit el nombre de zeros a la dreta del divisor, els hi traiem a l'string del dividend
+        Sdvdnd dup length ZDdvsr sub 0 exch getinterval /Sdvdnd exch def
+        %% i també al propi divisor
+        Sdvsr dup length ZDdvsr sub 0 exch getinterval /Sdvsr exch def
+       }ifelse
+%}if
+
+       Sdvdnd length mEnter gt
+       {
+        (\n\n >>> el dividend opera amb enters de més de 19 dígits ...aviam!\n\n)print flush  %% dvdnd == quit
+        /SBRXdvdnd true def
+       }
+       {
+        /SBRXdvdnd false def
+       }ifelse
+       %% aquí escapcem l'string a mEnter si SBRXdvdnd és a true
+       SBRXdvdnd
+       {
+        Sdvdnd 0 mEnter getinterval dup /Sdvdnd exch def
+       }if
+       cvx exec dup /Ndvdnd exch def
+
+       Sdvsr length mEnter gt
+       {
+        (\n\n >>> el divisor opera amb enters de més de 19 dígits ...aviam!\n\n)print flush  %% dvsr == quit
+        /SBRXdvsr true def
+       }
+       {
+        /SBRXdvsr false def
+       }ifelse
+       %% aquí escapcem l'string a mEnter si SBRXdvsr és a true
+       SBRXdvsr
+       {
+        Sdvsr 0 mEnter getinterval dup /Sdvsr exch def
+       }if
+       cvx exec dup /Ndvsr exch def
+
+       %% i fer div/cvi de quin nombre enter hi cap
+       %% treballant amb div/cvi podem superar la limitació de /mEnter?
+       %% més enllà dels 19 dígits que obliga GS, però n'hauríem d'establir un altre més gran (hi ha divisions que mai no acaben!)
+       div cvi /rM exch def
+
+       qcnt dup length dup /araVa exch def rM mEnter string cvs dup /SrM exch def
+       length add array dup 3 -1 roll 0 exch putinterval /qcnt exch def
+
+       /dgt 1 string def 
+       rM mEnter string cvs dup length 1 sub
+       iEnters
+       {
+        iDcml add /iDcml exch def
+       }
+       {
+        pop
+       }ifelse
+       {  %% forall per fragmentar dígit a dígit els enters
+        dgt exch 0 exch put dgt cvx exec
+        qcnt exch araVa exch put araVa 1 add /araVa exch def
+       }forall
+
+       %% calculem el nou dividend
+       Ndvdnd Ndvsr rM mul sub dup Ndvsr lt
+       {  %% és més gran el divisor
+        /Zqcnt true def
+       }
+       {  %% és més gran el dividend
+        /Zqcnt false def
+       }ifelse
+
+%%EP
+       dup /idvdnd exch def  %% valor enter del dividend a cada pas que dividim
+
+       %% tornem a passar el dividend a array
+       32 string cvs mark exch
+       %% igualem les arrays?
+       dup length dvsr length sub dup 0 lt
+       {  %% farcim de zeros a l'esquerra el dividend
+        abs {0 exch}repeat
+       }
+       {  %% farcim de zeros a l'esquerra el divisor
+        {0 exch}repeat
+       }ifelse
+       /dgt 1 string def 
+       {  %% forall per fragmentar dígit a dígit els enters
+        dgt exch 0 exch put dgt cvx exec
+       }forall
+       ] /dvdnd exch def
+      }if
+
+      idvdnd 0 eq
+      {  %% si dóna valor exacte o exhaurim el límit decimal previst
+       %% qcnt iDcml
+       %%(residuAzero) ==
+       exit
+      }
+      {
+       qcnt length mEnter ge
+       {
+        %% qcnt iDcml
+        %%(residuNOzero) ==
+        exit
+       }if
+      }ifelse
+
+      icops 1 add /icops exch def  %% test
+
+     }loop  %% de l'algorisme divisor
+%}stopped
+%{
+%Ndvsr Sdvsr Ndvdnd Sdvdnd (oooo)pstack quit
+%}if
+
+     /rsltt
+     [  %% resultat [ signe  enters ] [ decimals ]
+      [
+       sgn not
+       qcnt 0 iDcml 1 add getinterval aload pop
+      ]
+      [
+       qcnt iDcml 1 add qcnt length iDcml 1 add sub getinterval aload pop
+      ]
+     ] def
+    }ifelse  %% els dos nombres iguals?
+   }ifelse  %% divisió per zero? 
+
+
+ %% passem el resultat d'array [[signe #ienters][#decimals]] a string (#.#)
+ rsltt 0 get dup /Aenters exch def dup 0 get
+ {  %% signe negatiu
+  /rSigne true def
+ }
+ {  %% signe positiu
+  /rSigne false def
+ }ifelse
+ length rsltt 1 get dup /Adecimals exch def length add rSigne {1 add}if string /Srsltt exch def
+ rSigne
+ {  %% afegim el signe negatiu si s'escau
+  Srsltt 0 (-) putinterval
+ }if
+ rSigne
+ {
+  Aenters length  %% índex on anirà el punt decimal
+ }
+ {
+  Aenters length 1 sub  %% índex on anirà el punt decimal
+ }ifelse
+ /puntD exch def  %% índex on anirà el punt decimal
+ 1 1 Aenters length 1 sub
+ {  %% passem a string tots els dígits enters menys el signe
+  dup rSigne not{1 sub exch}if Aenters exch get 1 string cvs Srsltt 3 1 roll putinterval
+ }for
+ Srsltt puntD (.) putinterval  %% el punt decimal
+ 0 1 Adecimals length 1 sub
+ {  %% passem a string tots els dígits decimals
+  dup puntD add 1 add exch Adecimals exch get 1 string cvs Srsltt 3 1 roll putinterval
+ }for
+ %% deixem a l'stack el resultat /rsltt a string
+ Srsltt
+}bind def
+
+ (000004.1) (2.000000008)
+ acurat_div (&)pstack
+

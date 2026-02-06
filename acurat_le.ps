@@ -1,0 +1,324 @@
+%! acurat_le.ps
+%% treballa comparant dos nombres reals dins dues strings per retornar true/false com l'operador le
+%% (-1.0000) (-2.0000) acurat_le
+
+/acurat_le
+{
+ exch  %% algorisme per fragmentar i empaquetar el primer nombre /1nmbr
+ dup
+ cvx exec  %% la xifra ve dins una string
+ 0 lt  %% és un nombre negatiu?
+ {
+  true  %% signe -
+ }
+ {  %% tret que sigui un fals positiu d'un zero negatiu (-0) (-0.00)
+  dup 0 get 45 eq  %% se suposa que el signe menys serà l'ascii habitual
+  %% false signe +
+  %% true signe -
+ }ifelse
+ exch
+ (.) search
+ %% fragmentem la part entera
+ {
+  exch pop  %% eliminem el punt decimal
+ }
+ {  %% afegim la part decimal a zero que no duu
+  (0) exch
+ }ifelse
+ mark exch  %% balisa de l'array d'enters
+ 4 -1 roll exch  %% posem el signe al seu lloc
+ 1 index  %% si és negatiu eliminem el signe de l'string
+ {
+  dup length 1 sub 1 exch getinterval
+ }if
+ /dgt 1 string def 
+ {  %% forall per fragmentar dígit a dígit els enters
+  dgt exch 0 exch put dgt cvx exec
+ }forall
+ ]  %% tanquem l'array d'enters
+
+ %% esporguem zeros a l'esquerra a l'array d'enters
+ /ZE 0 def  %% nombre zeros a l'esquerra a esporgar
+ dup length dup 1 sub /finS exch def 2 gt
+ {  %% només si hi ha més de 2 elements (signe i un dígit) té possibilitats de contenir-ne
+  1 1 finS
+  {
+   1 index exch get 0 eq
+   {
+    ZE 1 add /ZE exch def
+   }
+   {
+    exit
+   }ifelse 
+  }for
+  ZE 0 ne
+  {  %% hi ha zeros a l'esquerra
+   ZE finS eq
+   {  %% l'enter és un zero
+    0 get 0 2 array astore  %% refem l'array d'enters sense zeros a l'esquerra
+   }
+   {  %% l'enter NO és un zero
+    mark exch dup 0 get exch 1 ZE add finS ZE sub getinterval aload pop ]  %% refem l'array d'enters sense zeros a l'esquerra
+   }ifelse
+  }if
+ }if
+
+ exch mark exch
+ {  %% forall per fragmentar dígit a dígit els decimals
+  dgt exch 0 exch put dgt cvx exec
+ }forall
+
+ counttomark dup /dcmls exch def 1 gt  %% sobren zeros a la dreta dels decimals?
+ {  %% esporguem zeros a la dreta a l'array decimal
+  /ndcmls 0 def
+  {  %% loop
+   dup 0 eq
+   {
+    pop
+    ndcmls 1 add /ndcmls exch def
+   }
+   {
+    exit
+   }ifelse
+  }loop
+  dcmls ndcmls eq
+  {  %% com que tot eren zeros, en deixem només un a l'array
+   0
+  }if
+ }if
+
+ ]  %% tanquem l'array decimal
+ 
+ %% primer nombre fragmentat i empaquetat
+ 2 array astore dup /1nmbr exch def
+ exch  %% /1nmbr a lloc
+
+ dup
+ cvx exec  %% la xifra de /2nmbr ve dins una string
+ 0 lt  %% és un nombre negatiu?
+ {
+  /esN true def  %% signe -
+ }
+ {  %% tret que sigui un fals positiu d'un zero negatiu (-0) (-0.00)
+  dup 0 get 45 eq  %% se suposa que el signe menys serà l'ascii habitual
+  /esN exch def  %% false signe + / true signe -
+ }ifelse
+ %% capturem /2nmbr a computar per fragmentar-lo a dígits
+ %% encara que sigui un enter, sempre durà un primer decimal a zero
+ (.) search
+ %% fragmentem la part entera
+ {
+  exch pop  %% eliminem el punt decimal
+ }
+ {  %% afegim la part decimal a zero que no duu
+  (0) exch
+ }ifelse
+ mark exch  %% balisa de l'array d'enters
+ esN  %% si és negatiu eliminem el signe de l'string
+ {
+  dup length 1 sub 1 exch getinterval 
+ }if
+ esN exch  %% l'índex 0 de l'array d'enters és el signe
+ /dgt 1 string def 
+ {  %% forall per fragmentar dígit a dígit els enters
+  dgt exch 0 exch put dgt cvx exec
+ }forall
+
+ ]  %% tanquem l'array d'enters
+
+ %% esporguem zeros a l'esquerra a l'array d'enters
+ /ZE 0 def  %% nombre zeros a l'esquerra a esporgar
+ dup length dup 1 sub /finS exch def 2 gt
+ {  %% només si hi ha més de 2 elements (signe i un dígit) té possibilitats de contenir-ne
+  1 1 finS
+  {
+   1 index exch get 0 eq
+   {
+    ZE 1 add /ZE exch def
+   }
+   {
+    exit
+   }ifelse 
+  }for
+  ZE 0 ne
+  {  %% hi ha zeros a l'esquerra
+   ZE finS eq
+   {  %% l'enter és un zero
+    0 get 0 2 array astore  %% refem l'array d'enters sense zeros a l'esquerra
+   }
+   {  %% l'enter NO és un zero
+    mark exch dup 0 get exch 1 ZE add finS ZE sub getinterval aload pop ]  %% refem l'array d'enters sense zeros a l'esquerra
+  }ifelse
+  }if
+ }if
+
+ %% fragmentem la part decimal
+ exch mark exch
+ {  %% forall per fragmentar dígit a dígit
+  dgt exch 0 exch put dgt cvx exec
+ }forall
+
+ counttomark dup /dcmls exch def 1 gt  %% sobren zeros a la dreta dels decimals?
+ {  %% esporguem zeros a la dreta a l'array decimal
+  /ndcmls 0 def
+  {  %% loop
+   dup 0 eq
+   {
+    pop
+    ndcmls 1 add /ndcmls exch def
+   }
+   {
+    exit
+   }ifelse
+  }loop
+  dcmls ndcmls eq
+  {  %% com que tot eren zeros, en deixem només un a l'array
+   0
+  }if
+ }if
+
+ %% necessitem igualar els dígits, farcint amb zeros, dels enters (esquerra) i decimals (dreta) dels dos nombres a computar
+ %% farcim de zeros a la dreta igualant els dígits decimals a 2nmbr? (segon nombre)
+ counttomark 1nmbr 1 get length sub dup 0 lt
+ {
+  abs {0}repeat  %% farcim de zeros a la dreta igualant decimals a 2nmbr
+  /iglr_1nmbr false def
+ }
+ {
+  pop
+  /iglr_1nmbr true def  %% és al primer nombre (1nmbr) on haurem de farcir de zeros a la dreta igualant decimals
+ }ifelse
+ ]  %% tanquem l'array decimal
+ 2 array astore /2nmbr exch def  %% desem el paquet amb el segon nombre fragmentat (sumand o subtrahend)
+
+ %% hem de farcir de zeros a l'esquerra als enters de 1nmbr o 2nmbr?
+ dup 0 get length  %% enters+signe de 1nmbr
+ 2nmbr 0 get length  %% enters+signe de 2nmbr
+ sub dup 0 lt
+ {  %% és al 1nmbr on hem de farcir els enters
+  dup 0 eq
+  {  %% no fem re
+   pop
+  }
+  {  %% és al 1nmbr on hem de farcir els enters
+   abs dup dup 1 add /araVa exch def 2 index 0 get length add array dup  %% nou paquet d'enters
+   3 index 0 get 0 get 0 exch put  %% farcim el signe
+   exch 1 exch 1 exch
+   {  %% for per farcir de zeros a l'esquerra dels enters, després del signe
+    1 index exch 0 put
+   }for
+   dup 2 index 0 get dup length 1 sub 1 exch getinterval araVa exch putinterval
+   1 index exch 0 exch put  %% modifiquem l'array d'enters 1nmbr a l'stack
+  }ifelse
+ }
+ {  %% és al 2nmbr on hem de farcir els enters
+  dup dup 1 add /araVa exch def 2nmbr 0 get length add array dup  %% nou paquet d'enters
+  2nmbr 0 get 0 get 0 exch put  %% farcim el signe
+  exch 1 exch 1 exch
+  {  %% for per farcir de zeros a l'esquerra dels enters, després del signe
+   1 index exch 0 put
+  }for
+  dup 2nmbr 0 get dup length 1 sub 1 exch getinterval araVa exch putinterval
+  2nmbr exch 0 exch put  %% desem l'array d'enters a 2nmbr
+ }ifelse
+
+ iglr_1nmbr  %% igualem i farcim de zeros a la dreta decimals a 1nmbr?
+ {
+  dup 1 get length 2nmbr 1 get length ne
+  {
+   dup dup 1 get 2nmbr 1 get length exch length sub /0f exch def  %% nombre de zeros a farcir
+   1 get mark exch aload pop 0f {0}repeat ] 1 exch put  %% farcim a la dreta, tanquem i ho desem a lloc
+  }
+  {
+   pop
+  }ifelse
+ }
+ {
+  pop
+ }ifelse
+
+ %% primer ens cal saber quin dels dos nombres és el més gran sense signe (absolut)
+ %% 1abs = true = el més gran es 1nmbr / 1abs = false = el més gran és 2nmbr
+ %% comparem enters
+ /gls true def  %% són iguals?
+ 1 1 1nmbr 0 get length 1 sub
+ {  %% for
+  dup 1nmbr 0 get exch get
+  exch 2nmbr 0 get exch get
+  2 copy eq
+  {
+   pop pop
+  }
+  {
+   /gls false def  %% NO són iguals
+   gt /1abs exch def  %% flag de si és més gran 1nmbr (true) o 2nmbr (false)
+   exit
+  }ifelse
+ }for
+ %% només si els enters són iguals comparem decimals
+ gls
+ {
+  /gls true def  %% són iguals?
+  0 1 1nmbr 1 get length 1 sub
+  {
+   dup 1nmbr 1 get exch get
+   exch 2nmbr 1 get exch get
+   2 copy eq
+   {
+    pop pop
+   }
+   {
+    /gls false def  %% NO són iguals
+    gt /1abs exch def  %% flag de si és més gran 1nmbr (true) o 2nmbr (false)
+    exit
+   }ifelse
+  }for
+ }if
+
+ %% per activar els operadors de comparació lt/le/gt/ge/eq cal avaluar en cada cas gls/1abs i signes de 1nmbr i 2nmbr
+ %% le responem si 1nmbr és més petit o igual que 2nmbr:
+ gls  %% els dos nombres són iguals?
+ {
+  1nmbr 0 get 0 get
+  2nmbr 0 get 0 get
+  eq  %% els dos nombres són iguals si també tenen el mateix signe
+  {
+   true
+  }
+  {  %% si tenen signe diferent...
+   1nmbr 0 get 0 get
+   %% true el negatiu és el més petit
+   %% false el positiu és el més gran
+  }ifelse
+ }
+ {  %% si els dos nombres no són iguals, podem interpretar-ho...
+  %% és més gran 1nmbr (true) o 2nmbr (false)?
+  1abs
+  {  %% és més gran 1nmbr
+   1nmbr 0 get 0 get  %% el booleà del signe de 1nmbr ens dóna directament el resultat de le
+   %% [si el més gran té signe positiu, llavors ho serà segur]
+   %% el més gran ho és si els dos tenen signe positiu
+   %% el més gran ho és si té signe positiu i l'altre negatiu
+
+   %% [si el més gran té signe negatiu, llavors serà el més petit]
+   %% el més gran és el més petit si té signe negatiu i l'altre positiu
+   %% el més gran és el més petit si tot dos tenen signe negatiu
+  }
+  {  %% és més petit 1nmbr
+   2nmbr 0 get 0 get not  %% el booleà del signe de 2nmbr negativat ens dóna directament el resultat de le
+   %% [si el més petit té el més gran en signe positiu, llavors ho serà segur]
+   %% el més petit ho és si els dos tenen signe positiu
+   %% el més petit ho és si té signe negatiu i l'altre positiu
+
+   %% [si el més petit té el més gran en signe negatiu, llavors serà el més gran]
+   %% el més petit és el més gran si té signe positiu i l'altre negatiu
+   %% el més petit és el més gran si tots dos tenen signe negatiu
+  }ifelse
+ }ifelse
+}bind def
+
+%% torna un booleà
+%% (1) (-1)
+ (-0) (0)  %% té en compte el fet que el zero és negatiu per comportar-se diferent a le
+ acurat_le ==
+
